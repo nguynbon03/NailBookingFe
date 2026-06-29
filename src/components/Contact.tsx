@@ -84,27 +84,31 @@ export default function Contact() {
             </div>
           </motion.div>
 
-          {/* Map placeholder */}
+          {/* Google Map Embed */}
           <motion.div
             initial={{ opacity: 0, x: 40 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="rounded-3xl overflow-hidden bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center min-h-[400px] shadow-xl shadow-pink-200/30"
+            className="rounded-3xl overflow-hidden shadow-xl shadow-pink-200/30 border border-pink-100"
           >
-            <div className="text-center p-8">
-              <div className="w-20 h-20 rounded-full bg-white/80 flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <MapPin size={36} className="text-pink-500" />
-              </div>
-              <p className="text-lg font-bold text-gray-800 mb-2">{salon.name}</p>
-              <p className="text-gray-600 mb-4">{salon.address}</p>
+            <iframe
+              title="The Nail Lounge Location"
+              className="w-full h-full min-h-[400px]"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d37638.6!2d-1.2!3d54.47!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x487e98f8f8f8f8f8%3A0x0!2s33+High+St%2C+Stokesley%2C+Middlesbrough+TS9+5AD%2C+UK!5e0!3m2!1sen!2suk!4v1`}
+            />
+            <div className="bg-white p-3 text-center border-t border-pink-100">
               <a
                 href={`https://maps.google.com/?q=${encodeURIComponent(salon.address)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-primary text-sm inline-flex items-center gap-2"
+                className="text-sm text-pink-600 hover:text-pink-700 font-medium inline-flex items-center gap-1"
               >
-                <CalendarDays size={16} />
+                <MapPin size={14} />
                 Open in Google Maps
               </a>
             </div>
