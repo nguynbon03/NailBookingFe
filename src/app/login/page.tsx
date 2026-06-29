@@ -1,0 +1,45 @@
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Sparkles, Mail, Lock, LogIn } from "lucide-react";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
+import Navbar from "@/components/Navbar";
+
+export default function LoginPage() {
+  const { login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(""); setLoading(true);
+    try { await login(email, password); window.location.href = "/"; }
+    catch (err: any) { setError(err.message || "Login failed"); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <><Navbar />
+    <main className="pt-16 min-h-screen flex items-center justify-center bg-gradient-to-b from-pink-50 to-white">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md mx-4">
+        <div className="bg-white rounded-3xl p-8 shadow-xl shadow-pink-100/50 border border-pink-100">
+          <div className="text-center mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white mx-auto mb-4"><Sparkles size={28} /></div>
+            <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
+            <p className="text-gray-500 text-sm mt-1">Sign in to book your appointment</p>
+          </div>
+          {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm">{error}</div>}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative"><Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" required className="w-full pl-10 p-3.5 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" /></div>
+            <div className="relative"><Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" required className="w-full pl-10 p-3.5 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" /></div>
+            <button type="submit" disabled={loading} className="btn-primary w-full py-3.5"><LogIn size={18} className="mr-2 inline" />{loading ? "Signing in..." : "Sign In"}</button>
+          </form>
+          <p className="text-center text-sm text-gray-500 mt-4">Don't have an account? <Link href="/register" className="text-pink-600 font-semibold hover:underline">Register</Link></p>
+        </div>
+      </motion.div>
+    </main></>
+  );
+}

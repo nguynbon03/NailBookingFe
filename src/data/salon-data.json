@@ -1,0 +1,78 @@
+{
+  "salon": {
+    "name": "The Nail Lounge @ Stokesley",
+    "tagline": "Here for Pretty Nails, Quality and Trust.",
+    "address": "33 High St, Stokesley, Middlesbrough, United Kingdom",
+    "postcode": "TS9 5AD",
+    "phone": "+447774292572",
+    "email": "nails.stokesley@outlook.com",
+    "hours": [
+      { "day": "Mon", "open": "09:00", "close": "20:00" },
+      { "day": "Tue", "open": "09:00", "close": "18:00" },
+      { "day": "Wed", "open": "09:00", "close": "20:00" },
+      { "day": "Thu", "open": "09:00", "close": "18:00" },
+      { "day": "Fri", "open": "09:00", "close": "20:00" },
+      { "day": "Sat", "open": "09:00", "close": "18:00" },
+      { "day": "Sun", "open": "10:00", "close": "17:00" }
+    ],
+    "discount": "10% off for under 13's!"
+  },
+  "categories": {
+    "popular": [
+      { "name": "Acrylic & Gel Polish - New Set", "price": "£39.00", "duration": "45m", "image": "/images/service-1.jpg" },
+      { "name": "Manicure & Gel Polish", "price": "£32.00", "duration": "45m", "image": "/images/service-2.jpg" },
+      { "name": "Gel Polish - Hands", "price": "£25.00", "duration": "30m", "image": "/images/service-3.jpg" },
+      { "name": "Deluxe Pedicure & Gel Polish", "price": "£50.00", "duration": "1h 0m", "image": "/images/service-4.jpg" },
+      { "name": "Nail Art", "price": "£3.00", "duration": "15m", "image": "/images/service-5.jpg" },
+      { "name": "Acrylic & Gel Polish - Infill", "price": "£31.00", "duration": "45m", "image": "/images/service-6.jpg" }
+    ],
+    "extensions_hands": [
+      { "name": "Acrylic & Gel Polish - New Set", "price": "£39.00", "duration": "45m" },
+      { "name": "Acrylic & Gel Polish - Infill", "price": "£31.00", "duration": "45m" },
+      { "name": "Ombre - New Set", "price": "£40.00", "duration": "45m" },
+      { "name": "Ombre - Infill", "price": "£35.00", "duration": "45m" },
+      { "name": "Builder Gel on Natural Nail - New Set", "price": "£38.00", "duration": "45m" },
+      { "name": "Builder Gel on Natural Nail - Infill", "price": "£33.00", "duration": "45m" },
+      { "name": "Removal (Before New Set) Extra", "price": "£5.00", "duration": "15m" }
+    ],
+    "extensions_feet": [
+      { "name": "Acrylic & Gel Polish - New Set", "price": "£39.00", "duration": "45m" },
+      { "name": "Acrylic & Gel Polish - Infill", "price": "£31.00", "duration": "45m" }
+    ],
+    "gel_polish": [
+      { "name": "Gel Polish - Hands", "price": "£25.00", "duration": "30m" },
+      { "name": "Gel Polish - Feet", "price": "£25.00", "duration": "30m" },
+      { "name": "Gel Polish Removal", "price": "£10.00", "duration": "15m" }
+    ],
+    "mani_pedi": [
+      { "name": "Manicure & Gel Polish", "price": "£32.00", "duration": "45m" },
+      { "name": "Manicure for Men", "price": "£23.00", "duration": "30m" },
+      { "name": "Deluxe Pedicure & Gel Polish", "price": "£50.00", "duration": "1h 0m" }
+    ],
+    "extras": [
+      { "name": "Nail Art", "price": "£3.00", "duration": "15m" },
+      { "name": "Gel Polish Removal", "price": "£10.00", "duration": "15m" }
+    ],
+    "waxing": [
+      { "name": "Eyebrows Wax", "price": "£8.00", "duration": "15m" },
+      { "name": "Eyebrows Tint", "price": "£8.00", "duration": "15m" },
+      { "name": "Upper Lip Wax", "price": "£5.00", "duration": "15m" },
+      { "name": "Chin Wax", "price": "£10.00", "duration": "15m" },
+      { "name": "Under Arm Wax", "price": "£10.00", "duration": "15m" }
+    ]
+  },
+  "testimonials": [
+    { "name": "Megan S", "text": "So happy with my nails! The atmosphere is great, and the staff really takes care of you. Their beauty services are just as amazing!" },
+    { "name": "Lucy H", "text": "Great service, friendly staff, and beautiful nails every time! I always get compliments after visiting The Nail Lounge @ Stokesley. Highly recommended!" },
+    { "name": "Isabelle C", "text": "From start to finish, my experience was amazing. The salon is so relaxing, and my nails and brows were done with so much care. Can't wait to return!" },
+    { "name": "Angela Stevens", "text": "I have just had the most amazing manicure and pedicure at The Nail Lounge @ Stokesley. The staff are so welcoming and they definitely know their craft!" },
+    { "name": "Sophie W", "text": "Absolutely love my nails! The team at The Nail Lounge @ Stokesley is so talented and professional. My gel manicure lasted weeks without chipping." },
+    { "name": "Emma T", "text": "Such a relaxing experience! The salon is beautiful, the staff is welcoming, and my nails look flawless. I've finally found my go-to spot!" },
+    { "name": "Laura P", "text": "The attention to detail here is outstanding. My nails are always perfect, and my brows have never looked better after their expert threading." },
+    { "name": "Jessica R", "text": "A fantastic salon! The quality of work is incredible, and the customer service is top-notch. My nails and treatments are always perfect!" },
+    { "name": "Charlotte M", "text": "Had the most amazing pedicure at The Nail Lounge @ Stokesley! My feet feel so soft, and the polish is still perfect. Definitely a must-visit!" },
+    { "name": "Rachel D", "text": "Such a wonderful experience! The staffs are friendly, the salon is spotless, and my nails, lashes, and brows have never looked better. Five-star service!" },
+    { "name": "Olivia K", "text": "I love how professional and caring the team is. My nails always turn out exactly how I want them, and their lash extensions are stunning!" },
+    { "name": "Natalie B", "text": "The best manicure I've had in ages! The nail technicians are so skilled. Highly recommend!" }
+  ]
+}
