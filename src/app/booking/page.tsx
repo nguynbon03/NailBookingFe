@@ -79,9 +79,9 @@ export default function BookingPage() {
                 <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                   <h3 className="text-lg font-bold mb-5">Select a Service</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {allServices.map((s) => (
+                    {allServices.map((s, i) => (
                       <button
-                        key={s.name}
+                        key={`${s.name}-${i}`}
                         onClick={() => setSelectedService(s.name)}
                         className={`text-left p-4 rounded-2xl border transition-all ${
                           selectedService === s.name
