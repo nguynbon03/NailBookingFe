@@ -49,6 +49,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return null;
   }
 
+  const consoleLabel = user.role === "MANAGER" ? "Manager" : "Admin";
+  const productLabel = `Nail Lounge ${consoleLabel}`;
+
   const nav = (mobile = false) => (
     <nav className={mobile ? "flex gap-2 overflow-x-auto px-3 pb-3" : "space-y-2"}>
       {sidebarLinks.map((link) => {
@@ -79,7 +82,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen bg-gray-50 lg:flex">
       <aside className="hidden lg:block w-64 bg-gray-900 text-white p-6 flex-shrink-0 h-screen sticky top-0">
-        <h1 className="text-xl font-bold mb-8">Nail Lounge Admin</h1>
+        <h1 className="text-xl font-bold mb-8">{productLabel}</h1>
         {nav(false)}
         <div className="mt-8 pt-6 border-t border-gray-700">
           <Link href="/" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-800 text-gray-400">
@@ -91,7 +94,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <header className="lg:hidden sticky top-0 z-40 bg-gray-50/95 backdrop-blur border-b border-gray-200 pt-3">
         <div className="flex items-center justify-between px-3 pb-3">
           <div>
-            <p className="text-xs text-pink-600 font-black uppercase tracking-wide">Admin</p>
+            <p className="text-xs text-pink-600 font-black uppercase tracking-wide">{consoleLabel}</p>
             <h1 className="text-base font-black text-gray-900 leading-tight">Nail Lounge</h1>
           </div>
           <Link href="/" className="h-10 px-3 rounded-xl bg-gray-900 text-white text-xs font-bold inline-flex items-center gap-1.5">

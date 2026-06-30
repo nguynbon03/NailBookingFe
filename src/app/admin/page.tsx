@@ -51,7 +51,7 @@ export default function AdminDashboard() {
     { label: "Revenue", value: money(stats.revenue), sub: "Total confirmed revenue records", icon: DollarSign, color: "from-emerald-400 to-teal-400" },
     { label: "Services", value: stats.services, sub: `${stats.activeServices} active on frontend`, icon: Package, color: "from-amber-400 to-orange-400" },
     { label: "Promo Codes", value: stats.activePromoCodes, sub: "Active discount codes", icon: Tags, color: "from-sky-400 to-cyan-400" },
-    { label: "Admin Role", value: user?.role || "-", sub: user?.name || "Current user", icon: UserCog, color: "from-gray-500 to-gray-700" },
+    { label: "Console Role", value: user?.role || "-", sub: user?.name || "Current user", icon: UserCog, color: "from-gray-500 to-gray-700" },
   ];
 
   return (

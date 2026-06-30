@@ -12,6 +12,7 @@ import { api } from "@/lib/api";
 import { fallbackServices, formatDuration, formatPrice, normalizeServices, type PublicService } from "@/lib/service-utils";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/context/AuthContext";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -35,12 +36,13 @@ type Staff = { id: string; name: string; email: string; role: string; active: bo
 type Slot = { time: string; availableStaffCount: number; staffIds: string[] };
 
 export default function BookingPage() {
+  const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [selectedService, setSelectedService] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [formData, setFormData] = useState({
-    name: "", phone: "", email: "", notes: "",
+    name: "", phone: "", email: "", emailConfirm: "", notes: "",
     promoCode: "", healthConfirmed: false, allergiesConfirmed: false, termsAccepted: false,
   });
   const [selectedStaff, setSelectedStaff] = useState("any");
@@ -78,10 +80,26 @@ export default function BookingPage() {
     });
   }, []);
 
+  useEffect(() => {
+    if (authLoading || !user) return;
+    setFormData((current) => ({
+      ...current,
+      name: current.name || user.name || "",
+      phone: current.phone || user.phone || "",
+      email: user.email || current.email,
+      emailConfirm: current.emailConfirm || user.email || "",
+    }));
+  }, [authLoading, user?.id, user?.email, user?.name, user?.phone]);
+
   const service = services.find((s) => s.id === selectedService || s.name === selectedService);
   const basePrice = service ? service.price : 0;
   const finalPrice = Math.max(0, basePrice - discount);
+  const accountEmail = (user?.email || "").trim().toLowerCase();
+  const bookingEmail = formData.email.trim().toLowerCase();
+  const confirmEmail = formData.emailConfirm.trim().toLowerCase();
   const emailValid = isEmailAddress(formData.email);
+  const emailMatchesAccount = Boolean(user && accountEmail && bookingEmail === accountEmail);
+  const emailConfirmMatchesAccount = Boolean(user && accountEmail && confirmEmail === accountEmail);
 
   useEffect(() => {
     setSelectedTime("");
@@ -129,13 +147,22 @@ export default function BookingPage() {
   const removeImage = () => setUploadedImage(null);
 
   const handleSubmit = async () => {
+    if (!user) {
+      alert("Please sign in before booking online.");
+      window.location.href = "/login?next=/booking";
+      return;
+    }
+    if (!emailMatchesAccount || !emailConfirmMatchesAccount) {
+      alert("The booking email and confirmation email must both match your signed-in account email.");
+      return;
+    }
     if (!formData.termsAccepted) return;
     setLoading(true);
     try {
       const result = await api.bookings.create({
         customerName: formData.name,
         customerPhone: formData.phone,
-        customerEmail: formData.email,
+        customerEmail: user?.email || formData.email,
         date: selectedDate,
         time: selectedTime,
         serviceIds: service ? [service.id] : [],
@@ -164,7 +191,27 @@ export default function BookingPage() {
     (step === 3 && selectedTime) ||
     step === 4;
 
-  const step4Valid = formData.name && formData.phone && emailValid && formData.termsAccepted;
+  const step4Valid = Boolean(user && formData.name && formData.phone && emailValid && emailMatchesAccount && emailConfirmMatchesAccount && formData.termsAccepted);
+
+  if (!authLoading && !user) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-20 min-h-screen bg-gradient-to-b from-pink-50/30 to-white flex items-center justify-center px-4">
+          <div className="max-w-lg w-full bg-white rounded-3xl border border-pink-100 shadow-xl shadow-pink-100/50 p-8 text-center">
+            <ShieldCheck size={42} className="mx-auto text-pink-600 mb-4" />
+            <h1 className="text-2xl font-black text-gray-900 mb-2">Sign in required</h1>
+            <p className="text-sm text-gray-500 mb-6">Please sign in or register first. Booking email must match the verified account email before a transfer link is sent.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Link href="/login?next=/booking" className="btn-primary">Sign In</Link>
+              <Link href="/register" className="btn-secondary">Register</Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   if (submitted) {
     const reference = verificationInfo?.reference || bookingReference(createdBooking?.id);
@@ -179,7 +226,7 @@ export default function BookingPage() {
               </div>
               <h1 className="text-3xl font-black text-gray-900 mb-3">Check Your Email</h1>
               <p className="text-gray-600 mb-2">Thank you, {formData.name}. Your booking request has been received.</p>
-              <p className="text-sm text-pink-600 font-bold mb-5">Please click the verification link sent to {formData.email}. Staff will not see or hold this appointment until email verification and shop/admin confirmation are complete.</p>
+              <p className="text-sm text-pink-600 font-bold mb-5">We sent a secure bank-transfer link to {formData.email}. Open it within 3 minutes to lock one available staff member for this time slot, then transfer with reference {reference}. Admin will confirm payment before the job appears on staff schedule.</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
                 <div className="rounded-2xl bg-gray-50 p-4">
@@ -188,7 +235,7 @@ export default function BookingPage() {
                 </div>
                 <div className="rounded-2xl bg-gray-50 p-4">
                   <p className="text-xs uppercase tracking-wide text-gray-400 font-black">Current status</p>
-                  <p className="text-sm font-black text-orange-600">Awaiting email verification</p>
+                  <p className="text-sm font-black text-orange-600">Awaiting transfer link click</p>
                 </div>
                 <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-700 space-y-1 sm:col-span-2">
                   <p><span className="font-bold">Date:</span> {selectedDate} at {selectedTime}</p>
@@ -199,7 +246,7 @@ export default function BookingPage() {
 
               <div className="mt-5 rounded-2xl bg-orange-50 border border-orange-100 p-4 text-left text-sm text-orange-800 flex gap-3">
                 <AlertCircle size={20} className="shrink-0 mt-0.5" />
-                <p>If a shop wants deposit/QR payment, the owner can request it separately or enable payment integration later. This request currently uses email verification first to prevent fake bookings and calendar blocking.</p>
+                <p>This request is not confirmed yet. Only transfer after opening the secure email link successfully; admin confirms payment manually and then the assigned staff schedule is updated.</p>
               </div>
               <Link href="/" className="btn-primary inline-flex mt-6">Back to Home</Link>
             </div>
@@ -375,12 +422,21 @@ export default function BookingPage() {
                         <input placeholder="Phone Number *" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full pl-10 p-4 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" />
                       </div>
                     </div>
-                    <div>
-                      <div className="relative">
-                        <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input placeholder="Registered Email Address *" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className={cn("w-full pl-10 p-4 rounded-xl border focus:ring-2 outline-none", formData.email && !emailValid ? "border-red-300 focus:ring-red-200" : "border-pink-200 focus:ring-pink-300")} />
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <div className="relative">
+                          <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input placeholder="Account Email *" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className={cn("w-full pl-10 p-4 rounded-xl border focus:ring-2 outline-none", formData.email && (!emailValid || !emailMatchesAccount) ? "border-red-300 focus:ring-red-200" : "border-pink-200 focus:ring-pink-300")} />
+                        </div>
+                        <p className={cn("text-xs mt-1.5", formData.email && (!emailValid || !emailMatchesAccount) ? "text-red-500" : "text-gray-400")}>Must match your signed-in account: {user?.email}</p>
                       </div>
-                      <p className={cn("text-xs mt-1.5", formData.email && !emailValid ? "text-red-500" : "text-gray-400")}>Use the same email you registered with. We will send a verification link to this email before the shop can confirm the booking.</p>
+                      <div>
+                        <div className="relative">
+                          <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input placeholder="Confirm Account Email *" type="email" value={formData.emailConfirm} onChange={(e) => setFormData({ ...formData, emailConfirm: e.target.value })} className={cn("w-full pl-10 p-4 rounded-xl border focus:ring-2 outline-none", formData.emailConfirm && !emailConfirmMatchesAccount ? "border-red-300 focus:ring-red-200" : "border-pink-200 focus:ring-pink-300")} />
+                        </div>
+                        <p className={cn("text-xs mt-1.5", formData.emailConfirm && !emailConfirmMatchesAccount ? "text-red-500" : "text-gray-400")}>Re-type the same verified account email before we send the transfer link.</p>
+                      </div>
                     </div>
 
                     {/* Staff summary */}
@@ -479,7 +535,7 @@ export default function BookingPage() {
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     )}
                   >
-                    {loading ? "Processing..." : "Confirm Booking"}
+                    {loading ? "Processing..." : "Send Secure Transfer Link"}
                   </button>
                 </motion.div>
               )}

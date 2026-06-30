@@ -36,7 +36,7 @@ export default function Navbar() {
           </Link>
           {isAdmin && (
             <Link href="/admin" className="flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium text-pink-700 bg-pink-50 hover:bg-pink-100 transition-all">
-              <Settings size={16} />Admin
+              <Settings size={16} />{user?.role === "MANAGER" ? "Manager" : "Admin"}
             </Link>
           )}
           {isStaff && (
@@ -111,7 +111,7 @@ export default function Navbar() {
           {user ? (
             <>
               <Link href="/my-bookings" className="block px-4 py-3 rounded-xl text-gray-700 hover:text-pink-600 hover:bg-pink-50 font-medium transition-all" onClick={() => setMobileOpen(false)}>My Bookings</Link>
-              {isAdmin && <Link href="/admin" className="block px-4 py-3 rounded-xl text-pink-700 bg-pink-50 font-medium transition-all" onClick={() => setMobileOpen(false)}>Admin Dashboard</Link>}
+              {isAdmin && <Link href="/admin" className="block px-4 py-3 rounded-xl text-pink-700 bg-pink-50 font-medium transition-all" onClick={() => setMobileOpen(false)}>{user?.role === "MANAGER" ? "Manager Dashboard" : "Admin Dashboard"}</Link>}
               {isStaff && <Link href="/staff" className="block px-4 py-3 rounded-xl text-emerald-700 bg-emerald-50 font-medium transition-all" onClick={() => setMobileOpen(false)}>Staff Portal</Link>}
               <button onClick={() => { setMobileOpen(false); logout(); }} className="block w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 font-medium transition-all">Logout</button>
             </>

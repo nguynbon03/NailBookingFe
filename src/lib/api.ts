@@ -22,6 +22,8 @@ export const api = {
   auth: {
     login: (email: string, password: string) =>
       fetchAPI("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+    google: (credential: string) =>
+      fetchAPI("/api/auth/google", { method: "POST", body: JSON.stringify({ credential }) }),
     register: (data: any) =>
       fetchAPI("/api/auth/register", { method: "POST", body: JSON.stringify(data) }),
     verifyEmail: (token: string) => fetchAPI("/api/auth/verify-email", { method: "POST", body: JSON.stringify({ token }) }),
@@ -45,6 +47,9 @@ export const api = {
   promoCodes: {
     validate: (code: string, subtotal: number) =>
       fetchAPI("/api/promo-codes/validate", { method: "POST", body: JSON.stringify({ code, subtotal }) }),
+  },
+  payments: {
+    hold: (token: string) => fetchAPI("/api/payments/transfer/hold", { method: "POST", body: JSON.stringify({ token }) }),
   },
   bookings: {
     create: (data: any) => fetchAPI("/api/bookings", { method: "POST", body: JSON.stringify(data) }),

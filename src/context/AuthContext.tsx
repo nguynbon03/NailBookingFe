@@ -3,8 +3,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { api } from "@/lib/api";
 
-interface User { id: string; email: string; name: string; role: string; emailVerifiedAt?: string | null; }
-interface AuthCtx { user: User | null; login: (email: string, password: string) => Promise<User>; register: (data: any) => Promise<void>; logout: () => void; loading: boolean; }
+interface User { id: string; email: string; name: string; role: string; phone?: string | null; emailVerifiedAt?: string | null; }
+interface AuthCtx { user: User | null; login: (email: string, password: string) => Promise<User>; loginWithGoogle: (credential: string) => Promise<User>; register: (data: any) => Promise<void>; logout: () => void; loading: boolean; }
 
 const AuthContext = createContext<AuthCtx | undefined>(undefined);
 
@@ -31,13 +31,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return d.user;
   };
 
+  const loginWithGoogle = async (credential: string) => {
+    const d = await api.auth.google(credential);
+    localStorage.setItem("token", d.token);
+    setUser(d.user);
+    return d.user;
+  };
+
   const register = async (data: any) => {
     await api.auth.register(data);
   };
 
   const logout = () => { localStorage.removeItem("token"); setUser(null); window.location.href = "/"; };
 
-  return <AuthContext.Provider value={{ user, login, register, logout, loading }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, login, loginWithGoogle, register, logout, loading }}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => { const ctx = useContext(AuthContext); if (!ctx) throw new Error("useAuth must be in AuthProvider"); return ctx; };

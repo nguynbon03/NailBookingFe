@@ -23,6 +23,8 @@ const roleClass: Record<string, string> = {
   CUSTOMER: "bg-gray-100 text-gray-700",
 };
 
+const roleOrder: Record<string, number> = { ADMIN: 0, MANAGER: 1, STAFF: 2, CUSTOMER: 3 };
+
 function shortDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "2-digit" });
@@ -49,14 +51,14 @@ export default function AdminAccounts() {
 
   useEffect(() => { refresh(); }, []);
 
-  const roles = useMemo(() => ["all", ...Array.from(new Set(accounts.map((a) => a.role)))], [accounts]);
+  const roles = useMemo(() => ["all", ...["ADMIN", "MANAGER", "STAFF", "CUSTOMER"].filter((item) => accounts.some((a) => a.role === item))], [accounts]);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return accounts.filter((account) => {
       const matchRole = role === "all" || account.role === role;
       const text = [account.name, account.email, account.phone || "", account.role, account.staffProfile?.name || ""].join(" ").toLowerCase();
       return matchRole && (!q || text.includes(q));
-    });
+    }).sort((a, b) => (roleOrder[a.role] ?? 99) - (roleOrder[b.role] ?? 99) || a.name.localeCompare(b.name));
   }, [accounts, query, role]);
 
   const canResetAccount = (account: Account) => {
@@ -96,10 +98,12 @@ export default function AdminAccounts() {
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Accounts</h2>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">Check login accounts and reset forgotten passwords for staff or customers.</p>
         </div>
-        <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
-          <div className="rounded-2xl bg-white border border-gray-100 p-3 text-center sm:min-w-24"><p className="text-xl font-black">{accounts.length}</p><p className="text-[11px] text-gray-400">Total</p></div>
-          <div className="rounded-2xl bg-white border border-gray-100 p-3 text-center sm:min-w-24"><p className="text-xl font-black">{accounts.filter((a) => a.role === "STAFF").length}</p><p className="text-[11px] text-gray-400">Staff</p></div>
-          <div className="rounded-2xl bg-white border border-gray-100 p-3 text-center sm:min-w-24"><p className="text-xl font-black">{accounts.filter((a) => a.role === "CUSTOMER").length}</p><p className="text-[11px] text-gray-400">Users</p></div>
+        <div className="grid grid-cols-5 gap-2 sm:flex sm:items-center">
+          <div className="rounded-2xl bg-white border border-gray-100 p-3 text-center sm:min-w-20"><p className="text-xl font-black">{accounts.length}</p><p className="text-[11px] text-gray-400">Total</p></div>
+          <div className="rounded-2xl bg-purple-50 border border-purple-100 p-3 text-center sm:min-w-20"><p className="text-xl font-black">{accounts.filter((a) => a.role === "ADMIN").length}</p><p className="text-[11px] text-purple-500">Admin</p></div>
+          <div className="rounded-2xl bg-blue-50 border border-blue-100 p-3 text-center sm:min-w-20"><p className="text-xl font-black">{accounts.filter((a) => a.role === "MANAGER").length}</p><p className="text-[11px] text-blue-500">Manager</p></div>
+          <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-3 text-center sm:min-w-20"><p className="text-xl font-black">{accounts.filter((a) => a.role === "STAFF").length}</p><p className="text-[11px] text-emerald-500">Staff</p></div>
+          <div className="rounded-2xl bg-white border border-gray-100 p-3 text-center sm:min-w-20"><p className="text-xl font-black">{accounts.filter((a) => a.role === "CUSTOMER").length}</p><p className="text-[11px] text-gray-400">Users</p></div>
         </div>
       </div>
 

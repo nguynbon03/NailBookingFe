@@ -124,8 +124,6 @@ export default function AdminStaff() {
                   <option value="THERAPIST">Therapist</option>
                   <option value="MANICURIST">Manicurist</option>
                   <option value="WAXING_SPECIALIST">Waxing Specialist</option>
-                  <option value="MANAGER">Manager</option>
-                  <option value="ADMIN">Admin</option>
                 </select>
               </label>
               <label className="space-y-1.5">
