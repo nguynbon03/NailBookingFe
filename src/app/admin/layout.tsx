@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { TrendingUp, CalendarDays, Package, Users, LogOut } from "lucide-react";
+import { TrendingUp, CalendarDays, Package, Users, LogOut, Tags } from "lucide-react";
 import Link from "next/link";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -17,6 +17,7 @@ const sidebarLinks = [
   { href: "/admin/bookings", label: "Bookings", icon: CalendarDays },
   { href: "/admin/services", label: "Services", icon: Package },
   { href: "/admin/staff", label: "Staff", icon: Users },
+  { href: "/admin/promo-codes", label: "Promo Codes", icon: Tags },
 ];
 
 const adminRoles = new Set(["ADMIN", "MANAGER", "STAFF"]);

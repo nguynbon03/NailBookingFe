@@ -1,63 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Search,
-  Hand,
-  Footprints,
-  Sparkles,
-  Scissors,
-  Star,
-  Droplets,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  ArrowRight,
-  ImageIcon,
-} from "lucide-react";
+import { Search, Hand, Footprints, Sparkles, Scissors, Star, Droplets, ChevronDown, ChevronUp, Clock, ArrowRight, ImageIcon } from "lucide-react";
 import Link from "next/link";
-import salonData from "@/data/salon-data.json";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { api } from "@/lib/api";
+import { categoryLabels, fallbackServices, formatDuration, formatPrice, groupServices, normalizeServices, orderedCategories, type PublicService } from "@/lib/service-utils";
 
-const categoryConfig: Record<
-  string,
-  { label: string; icon: React.ElementType; color: string }
-> = {
-  extensions_hands: { label: "Nail Extensions (Hands)", icon: Hand, color: "bg-pink-50 text-pink-600" },
-  extensions_feet: { label: "Nail Extensions (Feet)", icon: Footprints, color: "bg-rose-50 text-rose-600" },
-  gel_polish: { label: "Gel Polish", icon: Sparkles, color: "bg-fuchsia-50 text-fuchsia-600" },
-  mani_pedi: { label: "Mani & Pedi", icon: Scissors, color: "bg-pink-50 text-pink-600" },
-  extras: { label: "Extras", icon: Star, color: "bg-amber-50 text-amber-600" },
-  waxing: { label: "Waxing", icon: Droplets, color: "bg-cyan-50 text-cyan-600" },
+const icons: Record<string, React.ElementType> = {
+  extensions_hands: Hand,
+  extensions_feet: Footprints,
+  gel_polish: Sparkles,
+  mani_pedi: Scissors,
+  extras: Star,
+  waxing: Droplets,
 };
 
-const categoryOrder = [
-  "extensions_hands",
-  "extensions_feet",
-  "gel_polish",
-  "mani_pedi",
-  "extras",
-  "waxing",
-];
+const colors: Record<string, string> = {
+  extensions_hands: "bg-pink-50 text-pink-600",
+  extensions_feet: "bg-rose-50 text-rose-600",
+  gel_polish: "bg-fuchsia-50 text-fuchsia-600",
+  mani_pedi: "bg-pink-50 text-pink-600",
+  extras: "bg-amber-50 text-amber-600",
+  waxing: "bg-cyan-50 text-cyan-600",
+};
 
 export default function ServicesPage() {
   const [search, setSearch] = useState("");
   const [openCategory, setOpenCategory] = useState<string | null>("extensions_hands");
+  const [services, setServices] = useState<PublicService[]>(fallbackServices());
 
-  const allServices = Object.entries(salonData.categories).flatMap(([cat, services]) =>
-    (services as Array<{ name: string; price: string; duration: string }>).map((s) => ({ ...s, category: cat }))
-  );
+  useEffect(() => {
+    api.services.list().then((d: any) => {
+      const live = normalizeServices(d.services || []);
+      if (live.length) setServices(live);
+    }).catch(() => {});
+  }, []);
 
-  const filtered = allServices.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = services.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()));
+  const grouped = groupServices(filtered);
+  const cats = orderedCategories(grouped);
 
-  const handleBook = (serviceName: string) => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("selectedService", serviceName);
-    }
+  const handleBook = (service: PublicService) => {
+    if (typeof window !== "undefined") localStorage.setItem("selectedService", service.id);
   };
 
   return (
@@ -67,7 +54,7 @@ export default function ServicesPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
             <h1 className="text-4xl font-bold text-gradient mb-3">Our Services</h1>
-            <p className="text-gray-500">Browse our full range of nail and beauty treatments</p>
+            <p className="text-gray-500">Browse live services, prices and photos managed by the shop.</p>
           </motion.div>
 
           <div className="relative max-w-md mx-auto mb-8">
@@ -81,15 +68,9 @@ export default function ServicesPage() {
           </div>
 
           <div className="max-w-4xl mx-auto space-y-3">
-            {categoryOrder.map((catKey) => {
-              const config = categoryConfig[catKey];
-              const Icon = config.icon;
-              const services = (salonData.categories[catKey as keyof typeof salonData.categories] as Array<{
-                name: string;
-                price: string;
-                duration: string;
-              }>).filter((s) => s.name.toLowerCase().includes(search.toLowerCase()));
-              if (search && services.length === 0) return null;
+            {cats.map((catKey) => {
+              const Icon = icons[catKey] || Sparkles;
+              const catServices = grouped[catKey] || [];
               const isOpen = search ? true : openCategory === catKey;
 
               return (
@@ -105,12 +86,12 @@ export default function ServicesPage() {
                     className={`w-full flex items-center justify-between p-5 sm:p-6 text-left transition-colors ${search ? "" : "hover:bg-pink-50/30"}`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl ${config.color} flex items-center justify-center`}>
+                      <div className={`w-12 h-12 rounded-xl ${colors[catKey] || "bg-pink-50 text-pink-600"} flex items-center justify-center`}>
                         <Icon size={22} />
                       </div>
                       <div>
-                        <h3 className="font-bold text-lg text-gray-900">{config.label}</h3>
-                        <p className="text-sm text-gray-400">{services.length} services</p>
+                        <h3 className="font-bold text-lg text-gray-900">{categoryLabels[catKey] || catKey}</h3>
+                        <p className="text-sm text-gray-400">{catServices.length} services</p>
                       </div>
                     </div>
                     {!search && (
@@ -130,31 +111,30 @@ export default function ServicesPage() {
                         className="overflow-hidden"
                       >
                         <div className="px-5 sm:px-6 pb-5 sm:pb-6 space-y-2">
-                          {services.map((service, idx) => (
+                          {catServices.map((service, idx) => (
                             <motion.div
-                              key={service.name}
+                              key={service.id}
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: idx * 0.05, duration: 0.3 }}
+                              transition={{ delay: idx * 0.03, duration: 0.25 }}
                               className="flex items-center gap-4 p-3 rounded-xl hover:bg-pink-50/50 transition-colors group"
                             >
-                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center text-pink-400 shrink-0">
-                                <ImageIcon size={18} />
+                              <div className="w-14 h-14 rounded-xl bg-pink-50 flex items-center justify-center text-pink-400 shrink-0 overflow-hidden">
+                                {service.image ? <img src={service.image} alt={service.name} className="w-full h-full object-cover" /> : <ImageIcon size={18} />}
                               </div>
-
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-gray-900 text-sm sm:text-base truncate">{service.name}</p>
                                 <div className="flex items-center gap-2 text-sm text-gray-400">
                                   <Clock size={12} />
-                                  <span>{service.duration}</span>
+                                  <span>{formatDuration(service.duration)}</span>
                                 </div>
                               </div>
 
                               <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-                                <span className="font-bold text-pink-600 text-sm sm:text-base">{service.price}</span>
+                                <span className="font-bold text-pink-600 text-sm sm:text-base">{formatPrice(service.price)}</span>
                                 <Link
                                   href="/booking"
-                                  onClick={() => handleBook(service.name)}
+                                  onClick={() => handleBook(service)}
                                   className="btn-primary text-xs sm:text-sm py-2 px-4 flex items-center gap-1 group/btn"
                                 >
                                   Book
@@ -163,9 +143,6 @@ export default function ServicesPage() {
                               </div>
                             </motion.div>
                           ))}
-                          {services.length === 0 && (
-                            <p className="text-sm text-gray-400 px-3 py-2">No services match your search.</p>
-                          )}
                         </div>
                       </motion.div>
                     )}

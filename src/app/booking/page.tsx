@@ -8,8 +8,8 @@ import {
   X, Star
 } from "lucide-react";
 import Link from "next/link";
-import salonData from "@/data/salon-data.json";
 import { api } from "@/lib/api";
+import { fallbackServices, formatDuration, formatPrice, normalizeServices, type PublicService } from "@/lib/service-utils";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { clsx, type ClassValue } from "clsx";
@@ -17,22 +17,13 @@ import { twMerge } from "tailwind-merge";
 
 function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 
-const allServices = [
-  ...salonData.categories.extensions_hands,
-  ...salonData.categories.extensions_feet,
-  ...salonData.categories.gel_polish,
-  ...salonData.categories.mani_pedi,
-  ...salonData.categories.extras,
-  ...salonData.categories.waxing,
-];
-
 const timeSlots = [
   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
   "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
   "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
 ];
 
-type Staff = { id: string; name: string; email: string; role: string; active: boolean };
+type Staff = { id: string; name: string; email: string; role: string; active: boolean; avatar?: string | null };
 
 export default function BookingPage() {
   const [step, setStep] = useState(1);
@@ -45,6 +36,7 @@ export default function BookingPage() {
   });
   const [selectedStaff, setSelectedStaff] = useState("any");
   const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [services, setServices] = useState<PublicService[]>(fallbackServices());
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [discount, setDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -53,23 +45,42 @@ export default function BookingPage() {
 
   useEffect(() => {
     api.staff.list().then((d: any) => setStaffList(d.staff || [])).catch(() => {});
+    api.services.list().then((d: any) => {
+      const live = normalizeServices(d.services || []);
+      if (live.length) {
+        setServices(live);
+        const saved = typeof window !== "undefined" ? localStorage.getItem("selectedService") : "";
+        if (saved) {
+          const match = live.find((s) => s.id === saved || s.name === saved);
+          if (match) setSelectedService(match.id);
+        }
+      }
+    }).catch(() => {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("selectedService") : "";
+      if (saved) {
+        const match = services.find((s) => s.id === saved || s.name === saved);
+        if (match) setSelectedService(match.id);
+      }
+    });
   }, []);
 
-  const service = allServices.find((s) => s.name === selectedService);
-  const basePrice = service ? parseFloat(service.price.replace(/[£,]/g, "")) : 0;
+  const service = services.find((s) => s.id === selectedService || s.name === selectedService);
+  const basePrice = service ? service.price : 0;
   const finalPrice = Math.max(0, basePrice - discount);
 
   const handleNext = () => { if (step < 4) setStep(step + 1); };
   const handleBack = () => { if (step > 1) setStep(step - 1); };
 
-  const applyPromo = () => {
+  const applyPromo = async () => {
     const code = formData.promoCode.trim().toUpperCase();
-    if (code === "NAIL20") {
-      setDiscount(Math.round(basePrice * 0.2 * 100) / 100);
+    if (!code) return;
+    try {
+      const result = await api.promoCodes.validate(code, basePrice);
+      setDiscount(Number(result.discount || 0));
       setPromoError("");
-    } else {
+    } catch (err: any) {
       setDiscount(0);
-      setPromoError("Invalid promotion code");
+      setPromoError(err.message || "Invalid promotion code");
     }
   };
 
@@ -87,14 +98,13 @@ export default function BookingPage() {
     if (!formData.termsAccepted) return;
     setLoading(true);
     try {
-      const s = allServices.find((sv) => sv.name === selectedService);
       await api.bookings.create({
         customerName: formData.name,
         customerPhone: formData.phone,
         customerEmail: formData.email,
         date: selectedDate,
         time: selectedTime,
-        serviceIds: s ? [s.name] : [],
+        serviceIds: service ? [service.id] : [],
         staffId: selectedStaff === "any" ? null : selectedStaff,
         notes: formData.notes,
         promoCode: formData.promoCode || null,
@@ -177,13 +187,13 @@ export default function BookingPage() {
                 <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                   <h3 className="text-lg font-bold mb-5">Select a Service</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {allServices.map((s, i) => (
+                    {services.map((s) => (
                       <button
-                        key={`${s.name}-${i}`}
-                        onClick={() => setSelectedService(s.name)}
+                        key={s.id}
+                        onClick={() => setSelectedService(s.id)}
                         className={cn(
                           "text-left p-4 rounded-2xl border transition-all flex items-center gap-3",
-                          selectedService === s.name
+                          selectedService === s.id
                             ? "border-pink-400 bg-pink-50 shadow-md shadow-pink-100"
                             : "border-gray-100 bg-white hover:border-pink-200 hover:shadow-sm"
                         )}
@@ -198,11 +208,11 @@ export default function BookingPage() {
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-900 text-sm truncate">{s.name}</p>
                           <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
-                            <Clock size={12} />{s.duration}
+                            <Clock size={12} />{formatDuration(s.duration)}
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="font-bold text-pink-600 text-sm">{s.price}</p>
+                          <p className="font-bold text-pink-600 text-sm">{formatPrice(s.price)}</p>
                         </div>
                       </button>
                     ))}
@@ -286,11 +296,16 @@ export default function BookingPage() {
                         </button>
                         {staffList.map((st) => (
                           <button key={st.id} onClick={() => setSelectedStaff(st.id)} className={cn(
-                            "p-3 rounded-xl border text-sm font-medium transition-all",
+                            "p-3 rounded-xl border text-sm font-medium transition-all flex items-center gap-2 text-left",
                             selectedStaff === st.id ? "border-pink-400 bg-pink-50 text-pink-700" : "border-gray-200 hover:border-pink-200"
                           )}>
-                            {st.name}
-                            <span className={cn("ml-1 w-2 h-2 rounded-full inline-block", st.active ? "bg-green-500" : "bg-red-400")} />
+                            <span className="w-8 h-8 rounded-full bg-pink-50 overflow-hidden flex items-center justify-center text-pink-400 shrink-0">
+                              {st.avatar ? <img src={st.avatar} alt={st.name} className="w-full h-full object-cover" /> : st.name.charAt(0)}
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block truncate">{st.name}</span>
+                              <span className={cn("mt-1 w-2 h-2 rounded-full inline-block", st.active ? "bg-green-500" : "bg-red-400")} />
+                            </span>
                           </button>
                         ))}
                       </div>
