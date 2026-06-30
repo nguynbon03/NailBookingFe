@@ -89,33 +89,55 @@ export default function AdminStaff() {
             <h3 className="font-bold text-lg">{editing ? "Edit Staff" : "New Staff"}</h3>
             <button onClick={() => setShowForm(false)} className="p-2 rounded-full hover:bg-gray-100"><X size={18} /></button>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
             <div>
+              <p className="text-sm font-black text-gray-700 mb-2">Staff preview photo</p>
               <div className="w-full aspect-square rounded-2xl overflow-hidden bg-pink-50 border border-pink-100 flex items-center justify-center text-pink-400 mb-3">
                 {form.avatar ? <img src={form.avatar} alt="Staff preview" className="w-full h-full object-cover" /> : <ImagePlus size={36} />}
               </div>
-              <label className="btn-secondary w-full text-sm cursor-pointer">
-                Upload Photo
+              <label className="btn-secondary w-full min-h-12 text-sm cursor-pointer inline-flex items-center justify-center">
+                Upload staff photo
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => onImageFile(e.target.files?.[0])} />
               </label>
-              {form.avatar && <button onClick={() => setForm({ ...form, avatar: "" })} className="mt-2 text-xs text-red-500">Remove photo</button>}
+              {form.avatar && <button onClick={() => setForm({ ...form, avatar: "" })} className="mt-2 min-h-10 w-full rounded-xl bg-red-50 text-xs font-bold text-red-500">Remove photo</button>}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-              <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-              <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" placeholder={editing ? "Reset login password (optional)" : "Login password (default staff123)"} type="text" value={form.loginPassword} onChange={(e) => setForm({ ...form, loginPassword: e.target.value })} />
-              <select className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                <option value="THERAPIST">Therapist</option>
-                <option value="MANICURIST">Manicurist</option>
-                <option value="WAXING_SPECIALIST">Waxing Specialist</option>
-                <option value="MANAGER">Manager</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-              <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none md:col-span-2" placeholder="Photo URL or upload above" value={form.avatar} onChange={(e) => setForm({ ...form, avatar: e.target.value })} />
-              <textarea className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none md:col-span-2 min-h-[90px]" placeholder="Bio / specialties" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} className="w-5 h-5 rounded border-gray-300 text-pink-600 focus:ring-pink-500" /> Active on website
+              <label className="space-y-1.5">
+                <span className="text-sm font-black text-gray-700">Staff name</span>
+                <input className="w-full min-h-14 px-4 py-3 rounded-2xl border border-gray-200 text-base font-semibold text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="e.g. Emma Linh" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-sm font-black text-gray-700">Login email</span>
+                <input className="w-full min-h-14 px-4 py-3 rounded-2xl border border-gray-200 text-base font-semibold text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="staff@gmail.com" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-sm font-black text-gray-700">Phone number</span>
+                <input className="w-full min-h-14 px-4 py-3 rounded-2xl border border-gray-200 text-base font-semibold text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="+44 7774 222222" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-sm font-black text-gray-700">Login password</span>
+                <input className="w-full min-h-14 px-4 py-3 rounded-2xl border border-gray-200 text-base font-semibold text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-pink-300 outline-none" placeholder={editing ? "Leave blank unless resetting" : "Default: staff123"} type="text" value={form.loginPassword} onChange={(e) => setForm({ ...form, loginPassword: e.target.value })} />
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-sm font-black text-gray-700">Role / service specialty</span>
+                <select className="w-full min-h-14 px-4 py-3 rounded-2xl border border-gray-200 bg-white text-base font-semibold text-gray-900 focus:ring-2 focus:ring-pink-300 outline-none" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                  <option value="THERAPIST">Therapist</option>
+                  <option value="MANICURIST">Manicurist</option>
+                  <option value="WAXING_SPECIALIST">Waxing Specialist</option>
+                  <option value="MANAGER">Manager</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-sm font-black text-gray-700">Photo URL</span>
+                <input className="w-full min-h-14 px-4 py-3 rounded-2xl border border-gray-200 text-base font-semibold text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="/images/gallery-2.jpg or uploaded image" value={form.avatar} onChange={(e) => setForm({ ...form, avatar: e.target.value })} />
+              </label>
+              <label className="space-y-1.5 md:col-span-2">
+                <span className="text-sm font-black text-gray-700">Bio / specialties shown on website</span>
+                <textarea className="w-full min-h-28 px-4 py-3 rounded-2xl border border-gray-200 text-base font-semibold text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-pink-300 outline-none resize-y" placeholder="e.g. Waxing and beauty treatment expert" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+              </label>
+              <label className="flex items-center gap-3 min-h-14 rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-black text-gray-700">
+                <input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} className="w-6 h-6 rounded border-gray-300 text-pink-600 focus:ring-pink-500" /> Active on website and booking page
               </label>
             </div>
           </div>

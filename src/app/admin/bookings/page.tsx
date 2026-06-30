@@ -25,6 +25,17 @@ type Booking = {
 };
 
 const statuses = ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"];
+const statusLabels: Record<string, string> = {
+  PENDING: "Awaiting payment",
+  CONFIRMED: "Confirmed",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+  NO_SHOW: "No show",
+};
+
+function bookingReference(id: string) {
+  return `NL-${id.slice(-8).toUpperCase()}`;
+}
 
 function serviceSummary(booking: Booking) {
   return (booking.services || []).map((s) => s.service?.name).filter(Boolean).join(", ") || "N/A";
@@ -65,7 +76,7 @@ export default function AdminBookings() {
   const filtered = filter === "all" ? bookings : bookings.filter((b) => b.status === filter);
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
-      PENDING: "bg-amber-100 text-amber-700",
+      PENDING: "bg-orange-100 text-orange-700",
       CONFIRMED: "bg-emerald-100 text-emerald-700",
       CANCELLED: "bg-red-100 text-red-700",
       COMPLETED: "bg-blue-100 text-blue-700",
@@ -95,7 +106,7 @@ export default function AdminBookings() {
               const count = f === "all" ? bookings.length : bookings.filter((b) => b.status === f).length;
               return (
                 <button key={f} onClick={() => setFilter(f)} className={cn("px-3 py-2 rounded-xl text-xs sm:text-sm font-bold capitalize whitespace-nowrap", filter === f ? "bg-pink-600 text-white shadow-sm" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50")}>
-                  {f === "all" ? "All" : f.toLowerCase().replace("_", " ")} <span className="opacity-70">{count}</span>
+                  {f === "all" ? "All" : statusLabels[f]} <span className="opacity-70">{count}</span>
                 </button>
               );
             })}
@@ -134,6 +145,7 @@ export default function AdminBookings() {
                       <td className="px-3 py-2 min-w-[190px] max-w-[240px]">
                         <div className="font-bold text-gray-900 truncate">{b.customerName}</div>
                         <div className="text-[11px] text-gray-400 truncate">{b.customerPhone} · {b.customerEmail || b.user?.email || "No email"}</div>
+                        <div className="text-[11px] text-orange-600 font-bold truncate">Ref: {bookingReference(b.id)}{b.status === "PENDING" ? " · Wait for deposit" : ""}</div>
                       </td>
                       <td className="px-3 py-2 max-w-[260px]">
                         <div className="text-gray-700 truncate font-medium">{serviceSummary(b)}</div>
@@ -141,10 +153,10 @@ export default function AdminBookings() {
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-gray-600">{b.staff?.name || "Any"}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-right font-black text-pink-600">{formatPrice(b.totalPrice)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap"><span className={statusBadge(b.status)}>{b.status}</span></td>
+                      <td className="px-3 py-2 whitespace-nowrap"><span className={statusBadge(b.status)}>{statusLabels[b.status] || b.status}</span></td>
                       <td className="px-3 py-2">
                         <select value={b.status} onChange={(e) => updateStatus(b.id, e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold focus:ring-2 focus:ring-pink-300 outline-none bg-white">
-                          {statuses.map((status) => <option key={status} value={status}>{status}</option>)}
+                          {statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
                         </select>
                       </td>
                     </tr>
@@ -161,15 +173,15 @@ export default function AdminBookings() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-black text-gray-900 truncate">{b.customerName}</span>
-                      <span className={statusBadge(b.status)}>{b.status}</span>
+                      <span className={statusBadge(b.status)}>{statusLabels[b.status] || b.status}</span>
                     </div>
                     <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
                       <span className="inline-flex items-center gap-1"><CalendarDays size={11} />{shortDate(b.date)} {b.time}</span>
                       <span className="inline-flex items-center gap-1"><PoundSterling size={11} />{formatPrice(b.totalPrice)}</span>
                     </div>
                   </div>
-                  <select value={b.status} onChange={(e) => updateStatus(b.id, e.target.value)} className="px-2 py-2 rounded-xl border border-gray-200 text-xs font-bold bg-white shrink-0 max-w-[120px]">
-                    {statuses.map((status) => <option key={status} value={status}>{status}</option>)}
+                  <select value={b.status} onChange={(e) => updateStatus(b.id, e.target.value)} className="px-2 py-2 rounded-xl border border-gray-200 text-xs font-bold bg-white shrink-0 max-w-[150px]">
+                    {statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
                   </select>
                 </div>
 
@@ -178,6 +190,7 @@ export default function AdminBookings() {
                   <p className="flex items-center gap-1 min-w-0"><UserRound size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.staff?.name || "Any Staff"}</span></p>
                   <p className="flex items-center gap-1 min-w-0"><Phone size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.customerPhone}</span></p>
                   <p className="flex items-center gap-1 min-w-0"><Mail size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.customerEmail || b.user?.email || "No email"}</span></p>
+                  <p className="text-orange-600 font-bold">Ref: {bookingReference(b.id)}{b.status === "PENDING" ? " · Wait for deposit" : ""}</p>
                 </div>
 
                 {b.discount ? <div className="mt-2 flex items-center gap-1 text-emerald-600 text-xs"><Tag size={13} />Discount: -{formatPrice(b.discount)} {b.promoCode ? `(${b.promoCode})` : ""}</div> : null}
