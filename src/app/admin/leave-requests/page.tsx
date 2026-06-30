@@ -79,10 +79,6 @@ export default function AdminLeaveRequestsPage() {
         <button onClick={refresh} className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-bold inline-flex items-center gap-2"><RefreshCw size={16} />Refresh</button>
       </div>
 
-      <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 mb-4 text-sm text-sky-800">
-        <b>Logic:</b> Staff submits leave ticket → Manager approves/rejects → approved leave hides that staff from available booking slots for the leave dates. If approved leave conflicts with assigned confirmed bookings, the system alerts Manager to reassign.
-      </div>
-
       {error && <div className="mb-4 rounded-xl bg-orange-50 text-orange-700 p-3 text-sm flex gap-2"><AlertTriangle size={17} className="shrink-0" />{error}</div>}
 
       <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">

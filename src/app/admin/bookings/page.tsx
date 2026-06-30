@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
-import { CalendarDays, Phone, Mail, Tag, RefreshCw, UserRound, Scissors, PoundSterling, Archive, CheckCircle2, CreditCard, AlertTriangle } from "lucide-react";
+import { CalendarDays, Phone, Mail, Tag, RefreshCw, UserRound, Scissors, PoundSterling, Archive, AlertTriangle } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { formatPrice } from "@/lib/service-utils";
@@ -199,20 +199,6 @@ export default function AdminBookings() {
           <button onClick={refresh} className="h-10 w-10 sm:w-auto sm:px-3 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-pink-600 hover:border-pink-200 inline-flex items-center justify-center gap-2 shrink-0">
             <RefreshCw size={16} /><span className="hidden sm:inline text-sm font-semibold">Refresh</span>
           </button>
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-3 items-start rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-          <div>
-            <h3 className="font-black text-emerald-900 flex items-center gap-2"><CheckCircle2 size={18} /> Payment-safe workflow</h3>
-            <ol className="mt-2 grid grid-cols-1 md:grid-cols-5 gap-2 text-xs text-emerald-800">
-              <li><b>1.</b> Customer registers + verifies account email.</li>
-              <li><b>2.</b> Booking request waits for booking-email verification.</li>
-              <li><b>3.</b> Owner/Manager checks bank transfer manually.</li>
-              <li><b>4.</b> Click <b>Payment received</b>; revenue is counted and Staff can accept.</li>
-              <li><b>5.</b> Staff only accepts/rejects internal job. Customer cancellation is Owner/Manager only.</li>
-            </ol>
-          </div>
-          <div className="text-xs text-emerald-900 bg-white/70 rounded-2xl p-3 min-w-[210px]"><CreditCard size={16} className="inline mr-1" /> Confirm only after money is actually received to avoid lost revenue.</div>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
