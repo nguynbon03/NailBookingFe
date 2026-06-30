@@ -26,6 +26,7 @@ type CustomerReport = {
   range: { period: string; label: string };
   summary: { customers: number; activeInPeriod: number; bookings: number; spend: number; cancelled: number; noShow: number };
   customers: CustomerRow[];
+  exportEnabled: boolean;
 };
 
 function money(value: number) {
@@ -56,11 +57,14 @@ export default function AdminCustomersPage() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [report, setReport] = useState<CustomerReport | null>(null);
   const [loading, setLoading] = useState(true);
+  const [savingExport, setSavingExport] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
 
   const refresh = () => {
     setError("");
+    setNotice("");
     setLoading(true);
     api.admin.customers({ period, date })
       .then((data: CustomerReport) => setReport(data))
@@ -71,11 +75,31 @@ export default function AdminCustomersPage() {
   useEffect(() => { refresh(); }, []);
 
   const exportFile = async (format: "pdf" | "csv") => {
+    if (report?.exportEnabled === false) {
+      setError("Customer export is OFF. Turn on Export data before downloading PDF/CSV.");
+      return;
+    }
     try {
       const query = new URLSearchParams({ period, date, format });
       await downloadAdminFile(`/api/admin/customers/export?${query.toString()}`, `nail-lounge-customers.${format}`);
     } catch (err: any) {
       setError(err.message || "Could not export customer data");
+    }
+  };
+
+  const toggleExport = async () => {
+    const next = !(report?.exportEnabled !== false);
+    setSavingExport(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await api.admin.updateCustomerExport(next);
+      setReport((current) => current ? { ...current, exportEnabled: result.exportEnabled !== false } : current);
+      setNotice(result.exportEnabled ? "Customer export is ON. Admin can download PDF/CSV." : "Customer export is OFF. PDF/CSV download is blocked until re-enabled.");
+    } catch (err: any) {
+      setError(err.message || "Could not update export toggle");
+    } finally {
+      setSavingExport(false);
     }
   };
 
@@ -86,6 +110,8 @@ export default function AdminCustomersPage() {
     return rows.filter((c) => [c.name, c.email, c.phone, c.lastService, c.lastStaff].some((value) => String(value || "").toLowerCase().includes(q)));
   }, [report, search]);
 
+  const exportEnabled = report?.exportEnabled !== false;
+
   return (
     <div>
       <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3 mb-4 sm:mb-6">
@@ -95,6 +121,9 @@ export default function AdminCustomersPage() {
           <p className="text-xs sm:text-sm text-gray-500 mt-1">Customer list with weekly, monthly, and yearly exports for shop owner reporting.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button onClick={toggleExport} disabled={savingExport || !report} className={`h-10 px-3 rounded-xl text-sm font-black inline-flex items-center gap-2 border disabled:opacity-50 ${exportEnabled ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+            Export data: {savingExport ? "Saving..." : exportEnabled ? "ON" : "OFF"}
+          </button>
           <select value={period} onChange={(e) => setPeriod(e.target.value)} className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700">
             <option value="week">Week</option>
             <option value="month">Month</option>
@@ -102,12 +131,14 @@ export default function AdminCustomersPage() {
           </select>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700" />
           <button onClick={refresh} className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-bold inline-flex items-center gap-2"><RefreshCw size={16} />Refresh</button>
-          <button onClick={() => exportFile("pdf")} className="h-10 px-3 rounded-xl bg-pink-600 text-white text-sm font-bold inline-flex items-center gap-2"><FileText size={16} />PDF</button>
-          <button onClick={() => exportFile("csv")} className="h-10 px-3 rounded-xl bg-gray-900 text-white text-sm font-bold inline-flex items-center gap-2"><Download size={16} />Excel CSV</button>
+          <button onClick={() => exportFile("pdf")} disabled={!exportEnabled} className={`h-10 px-3 rounded-xl text-sm font-bold inline-flex items-center gap-2 disabled:cursor-not-allowed ${exportEnabled ? "bg-pink-600 text-white" : "bg-gray-100 text-gray-400"}`}><FileText size={16} />PDF</button>
+          <button onClick={() => exportFile("csv")} disabled={!exportEnabled} className={`h-10 px-3 rounded-xl text-sm font-bold inline-flex items-center gap-2 disabled:cursor-not-allowed ${exportEnabled ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-400"}`}><Download size={16} />Excel CSV</button>
         </div>
       </div>
 
       {error && <div className="mb-4 rounded-xl bg-orange-50 text-orange-700 p-3 text-sm flex gap-2"><AlertTriangle size={17} className="shrink-0" />{error}</div>}
+      {notice && <div className="mb-4 rounded-xl bg-emerald-50 text-emerald-700 p-3 text-sm font-bold">{notice}</div>}
+      {!exportEnabled && <div className="mb-4 rounded-xl bg-red-50 text-red-700 p-3 text-sm font-bold">Customer PDF/CSV export is OFF. The customer list remains visible for admin operations, but downloads are blocked until this toggle is turned back ON.</div>}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <div className="bg-white rounded-2xl border border-pink-100 p-3 sm:p-5"><p className="text-[11px] font-black text-pink-500 uppercase">Customers</p><p className="text-2xl font-black text-gray-900">{report?.summary.customers ?? 0}</p></div>

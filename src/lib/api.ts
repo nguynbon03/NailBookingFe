@@ -116,6 +116,7 @@ export const api = {
       if (params?.date) query.set("date", params.date);
       return fetchAPI(`/api/admin/customers${query.toString() ? `?${query.toString()}` : ""}`);
     },
+    updateCustomerExport: (exportEnabled: boolean) => fetchAPI("/api/admin/customers", { method: "PUT", body: JSON.stringify({ exportEnabled }) }),
     revenueReport: (params?: { period?: string; date?: string }) => {
       const query = new URLSearchParams();
       if (params?.period) query.set("period", params.period);
