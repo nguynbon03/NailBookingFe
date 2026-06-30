@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
-import { CheckCircle2, XCircle, RefreshCw, CalendarOff, AlertTriangle } from "lucide-react";
+import { CheckCircle2, XCircle, RefreshCw, CalendarOff, AlertTriangle, Trash2 } from "lucide-react";
 
 type LeaveRequest = {
   id: string;
@@ -62,6 +62,17 @@ export default function AdminLeaveRequestsPage() {
     }
   };
 
+  const deleteLeave = async (item: LeaveRequest) => {
+    const ok = window.confirm(`Delete ${item.staff?.name || "staff"}'s leave request from the admin list? This is for cleanup and cannot be undone.`);
+    if (!ok) return;
+    try {
+      await api.admin.deleteLeave(item.id);
+      setItems((rows) => rows.filter((row) => row.id !== item.id));
+    } catch (err: any) {
+      setError(err.message || "Could not delete leave request");
+    }
+  };
+
   const stats = useMemo(() => ({
     pending: items.filter((item) => item.status === "PENDING").length,
     approved: items.filter((item) => item.status === "APPROVED").length,
@@ -106,14 +117,17 @@ export default function AdminLeaveRequestsPage() {
                   {item.reviewedAt && <p className="text-xs text-gray-400 mt-1">Reviewed by {item.reviewedBy || "Manager"} at {new Date(item.reviewedAt).toLocaleString()}</p>}
                   {item.managerNote && <p className="text-xs text-gray-500 mt-1">Manager note: {item.managerNote}</p>}
                 </div>
-                {item.status === "PENDING" && (
+                {item.status === "PENDING" ? (
                   <div className="w-full lg:w-[360px] shrink-0">
                     <textarea className="w-full min-h-20 rounded-xl border border-gray-200 p-3 text-sm mb-2" placeholder="Optional manager note" value={notes[item.id] || ""} onChange={(e) => setNotes({ ...notes, [item.id]: e.target.value })} />
                     <div className="grid grid-cols-2 gap-2">
                       <button onClick={() => review(item.id, "APPROVED")} className="min-h-11 rounded-xl bg-emerald-600 text-white text-sm font-bold inline-flex items-center justify-center gap-1"><CheckCircle2 size={16} />Approve</button>
                       <button onClick={() => review(item.id, "REJECTED")} className="min-h-11 rounded-xl bg-red-600 text-white text-sm font-bold inline-flex items-center justify-center gap-1"><XCircle size={16} />Reject</button>
+                      <button onClick={() => deleteLeave(item)} className="col-span-2 min-h-10 rounded-xl bg-red-50 text-red-600 text-sm font-bold inline-flex items-center justify-center gap-1 hover:bg-red-100"><Trash2 size={15} />Delete ticket</button>
                     </div>
                   </div>
+                ) : (
+                  <button onClick={() => deleteLeave(item)} className="min-h-10 rounded-xl bg-red-50 px-3 text-red-600 text-sm font-bold inline-flex items-center justify-center gap-1 hover:bg-red-100"><Trash2 size={15} />Delete</button>
                 )}
               </div>
             </div>

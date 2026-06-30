@@ -46,8 +46,10 @@ export const api = {
     },
   },
   notifications: {
-    list: (audience?: string) => fetchAPI(`/api/notifications${audience ? `?audience=${audience}` : ""}`),
+    list: (audience?: string, take = 50) => fetchAPI(`/api/notifications?take=${take}${audience ? `&audience=${audience}` : ""}`),
     markAll: (audience: string) => fetchAPI("/api/notifications", { method: "PUT", body: JSON.stringify({ audience, read: true }) }),
+    markOne: (id: string, read = true, audience = "admin") => fetchAPI("/api/notifications", { method: "PUT", body: JSON.stringify({ id, read, audience }) }),
+    deleteOne: (id: string, audience = "admin") => fetchAPI("/api/notifications", { method: "DELETE", body: JSON.stringify({ id, audience }) }),
   },
   promoCodes: {
     validate: (code: string, subtotal: number) =>
@@ -107,6 +109,27 @@ export const api = {
     deleteAccount: (id: string) => fetchAPI("/api/admin/accounts", { method: "DELETE", body: JSON.stringify({ id }) }),
     leaves: () => fetchAPI("/api/staff/leave?scope=all"),
     reviewLeave: (id: string, status: string, managerNote?: string) => fetchAPI("/api/staff/leave", { method: "PUT", body: JSON.stringify({ id, status, managerNote }) }),
+    deleteLeave: (id: string) => fetchAPI("/api/staff/leave", { method: "DELETE", body: JSON.stringify({ id, hardDelete: true }) }),
+    customers: (params?: { period?: string; date?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.period) query.set("period", params.period);
+      if (params?.date) query.set("date", params.date);
+      return fetchAPI(`/api/admin/customers${query.toString() ? `?${query.toString()}` : ""}`);
+    },
+    revenueReport: (params?: { period?: string; date?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.period) query.set("period", params.period);
+      if (params?.date) query.set("date", params.date);
+      return fetchAPI(`/api/admin/reports/revenue${query.toString() ? `?${query.toString()}` : ""}`);
+    },
+    sendRevenueAction: (data: any) => fetchAPI("/api/admin/reports/revenue", { method: "POST", body: JSON.stringify(data) }),
+    bankStatements: (params?: { period?: string; date?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.period) query.set("period", params.period);
+      if (params?.date) query.set("date", params.date);
+      return fetchAPI(`/api/admin/bank-statements${query.toString() ? `?${query.toString()}` : ""}`);
+    },
+    importBankStatement: (csv: string) => fetchAPI("/api/admin/bank-statements", { method: "POST", body: JSON.stringify({ csv, source: "admin_upload" }) }),
     protection: () => fetchAPI("/api/admin/protection"),
     updateProtection: (data: any) => fetchAPI("/api/admin/protection", { method: "PUT", body: JSON.stringify(data) }),
     addBlocklist: (data: any) => fetchAPI("/api/admin/protection", { method: "POST", body: JSON.stringify(data) }),

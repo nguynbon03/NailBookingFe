@@ -129,6 +129,9 @@ export default function AdminDashboard() {
       <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 mb-6 sm:mb-8">
         <h3 className="font-bold mb-3 sm:mb-4 text-gray-900">Quick Actions</h3>
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3">
+          <Link href="/admin/inbox" className="btn-secondary text-center">Inbox</Link>
+          <Link href="/admin/customers" className="btn-secondary text-center">Customers</Link>
+          <Link href="/admin/reports" className="btn-secondary text-center">Reports</Link>
           <Link href="/admin/services" className="btn-primary text-center">+ Add Service</Link>
           <Link href="/admin/staff" className="btn-secondary text-center">+ Add Staff</Link>
           <Link href="/admin/leave-requests" className="btn-secondary text-center">Leave Requests</Link>

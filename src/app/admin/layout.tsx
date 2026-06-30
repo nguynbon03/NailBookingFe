@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { TrendingUp, CalendarDays, Package, Users, LogOut, Tags, UserCog, CalendarOff, ShieldCheck } from "lucide-react";
+import { TrendingUp, CalendarDays, Package, Users, LogOut, Tags, UserCog, CalendarOff, ShieldCheck, Inbox, FileText, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -14,7 +14,10 @@ function cn(...inputs: ClassValue[]) {
 
 const sidebarLinks = [
   { href: "/admin", label: "Dashboard", icon: TrendingUp },
+  { href: "/admin/inbox", label: "Inbox", icon: Inbox },
   { href: "/admin/bookings", label: "Bookings", icon: CalendarDays },
+  { href: "/admin/customers", label: "Customers", icon: FileText },
+  { href: "/admin/reports", label: "Reports", icon: BarChart3 },
   { href: "/admin/services", label: "Services", icon: Package },
   { href: "/admin/staff", label: "Staff", icon: Users },
   { href: "/admin/leave-requests", label: "Leave", icon: CalendarOff },
