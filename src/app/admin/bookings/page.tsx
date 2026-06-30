@@ -29,8 +29,13 @@ type Booking = {
   staffRejectionReason?: string | null;
   staffRejectionBy?: string | null;
   archivedAt?: string | null;
+  sourceIp?: string | null;
+  depositRequired?: boolean;
+  depositAmount?: number | null;
+  depositModeSnapshot?: string | null;
   status: string;
   staff?: { name: string } | null;
+  requestedStaff?: { name: string } | null;
   user?: { name: string; email: string; role: string } | null;
   services?: { service: { name: string; price: number; image?: string | null } }[];
 };
@@ -39,8 +44,8 @@ const statuses = ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 const cancellationReasons = ["Shop have Problem", "Staff have problem", "Shop is too busy", "Customer asked to cancel", "No Reason", "Other"];
 const defaultCancellationReason = "No Reason";
 const statusLabels: Record<string, string> = {
-  PENDING: "Awaiting transfer",
-  CONFIRMED: "Paid / Confirmed",
+  PENDING: "Waiting staff/deposit",
+  CONFIRMED: "Confirmed",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
   NO_SHOW: "No show",
@@ -60,6 +65,12 @@ function serviceSummary(booking: Booking) {
   return (booking.services || []).map((s) => s.service?.name).filter(Boolean).join(", ") || "N/A";
 }
 
+function staffDisplay(booking: Booking) {
+  if (booking.staff?.name) return booking.staff.name;
+  if (booking.requestedStaff?.name) return `Requested: ${booking.requestedStaff.name}`;
+  return "Any Staff";
+}
+
 function shortDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
@@ -71,8 +82,9 @@ function workflowStage(b: Booking) {
   if (b.status === "COMPLETED") return { label: "Done / revenue kept", tone: "bg-blue-100 text-blue-700" };
   if (b.status === "NO_SHOW") return { label: "No-show / paid revenue kept", tone: "bg-gray-100 text-gray-700" };
   if (!b.emailVerifiedAt) return { label: "1. Email pending", tone: "bg-amber-100 text-amber-700" };
-  if (b.status === "PENDING") return { label: "2. Awaiting bank transfer", tone: "bg-orange-100 text-orange-700" };
-  if (b.status === "CONFIRMED" && !b.staff) return { label: "3. Paid - assign staff", tone: "bg-emerald-100 text-emerald-700" };
+  if (b.status === "PENDING" && b.depositRequired) return { label: `2. Deposit required${b.depositAmount ? ` £${Number(b.depositAmount).toFixed(2)}` : ""}`, tone: "bg-orange-100 text-orange-700" };
+  if (b.status === "PENDING") return { label: "2. Waiting staff acceptance", tone: "bg-sky-100 text-sky-700" };
+  if (b.status === "CONFIRMED" && !b.staff) return { label: "3. Confirmed - assign staff", tone: "bg-emerald-100 text-emerald-700" };
   if (b.status === "CONFIRMED" && b.staff) return { label: "4. Staff assigned", tone: "bg-emerald-100 text-emerald-700" };
   return { label: b.status, tone: "bg-gray-100 text-gray-700" };
 }
@@ -128,8 +140,8 @@ export default function AdminBookings() {
       setError("Cannot confirm payment before customer email verification.");
       return;
     }
-    if (status === "CONFIRMED" && target.status !== "CONFIRMED") {
-      const ok = window.confirm("Only confirm after bank transfer/payment is actually received. This will count revenue and release the job to Staff Portal. Continue?");
+    if (status === "CONFIRMED" && target.status !== "CONFIRMED" && target.depositRequired) {
+      const ok = window.confirm("This booking requires deposit. Confirm only after the deposit/payment is actually received. Continue?");
       if (!ok) return;
     }
 
@@ -218,7 +230,7 @@ export default function AdminBookings() {
     return {
       total: active.length,
       emailPending: active.filter((b) => !b.emailVerifiedAt).length,
-      awaitingTransfer: active.filter((b) => b.emailVerifiedAt && b.status === "PENDING").length,
+      awaitingTransfer: active.filter((b) => b.emailVerifiedAt && b.status === "PENDING" && b.depositRequired).length,
       paidCount: paid.length,
       revenue: paid.reduce((sum, b) => sum + Number(b.totalPrice || 0), 0),
       cancelled: active.filter((b) => b.status === "CANCELLED").length,
@@ -238,7 +250,7 @@ export default function AdminBookings() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Bookings</h2>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1">Daily workflow: email verified → bank transfer checked → payment confirmed → staff accepts job → complete/no-show.</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">Daily workflow: verified customer → optional deposit protection → staff accepts/gets assigned → complete/no-show. Blacklist and limits reduce spam bookings.</p>
           </div>
           <button onClick={refresh} className="h-10 w-10 sm:w-auto sm:px-3 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-pink-600 hover:border-pink-200 inline-flex items-center justify-center gap-2 shrink-0">
             <RefreshCw size={16} /><span className="hidden sm:inline text-sm font-semibold">Refresh</span>
@@ -248,9 +260,9 @@ export default function AdminBookings() {
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
           <div className="rounded-2xl bg-white border border-gray-100 p-3"><p className="text-[11px] text-gray-400 font-black uppercase">Active</p><p className="text-2xl font-black">{stats.total}</p></div>
           <div className="rounded-2xl bg-white border border-amber-100 p-3"><p className="text-[11px] text-amber-500 font-black uppercase">Email pending</p><p className="text-2xl font-black">{stats.emailPending}</p></div>
-          <div className="rounded-2xl bg-white border border-orange-100 p-3"><p className="text-[11px] text-orange-500 font-black uppercase">Awaiting transfer</p><p className="text-2xl font-black">{stats.awaitingTransfer}</p></div>
-          <div className="rounded-2xl bg-white border border-emerald-100 p-3"><p className="text-[11px] text-emerald-500 font-black uppercase">Paid jobs</p><p className="text-2xl font-black">{stats.paidCount}</p></div>
-          <div className="rounded-2xl bg-white border border-pink-100 p-3"><p className="text-[11px] text-pink-500 font-black uppercase">Paid revenue</p><p className="text-2xl font-black">{formatPrice(stats.revenue)}</p></div>
+          <div className="rounded-2xl bg-white border border-orange-100 p-3"><p className="text-[11px] text-orange-500 font-black uppercase">Need deposit</p><p className="text-2xl font-black">{stats.awaitingTransfer}</p></div>
+          <div className="rounded-2xl bg-white border border-emerald-100 p-3"><p className="text-[11px] text-emerald-500 font-black uppercase">Confirmed jobs</p><p className="text-2xl font-black">{stats.paidCount}</p></div>
+          <div className="rounded-2xl bg-white border border-pink-100 p-3"><p className="text-[11px] text-pink-500 font-black uppercase">Revenue</p><p className="text-2xl font-black">{formatPrice(stats.revenue)}</p></div>
           <div className="rounded-2xl bg-white border border-red-100 p-3"><p className="text-[11px] text-red-500 font-black uppercase">Cancelled</p><p className="text-2xl font-black">{stats.cancelled}</p></div>
         </div>
 
@@ -325,14 +337,14 @@ export default function AdminBookings() {
                         <td className="px-3 py-2 whitespace-nowrap"><div className="font-black text-gray-900 leading-tight">{shortDate(b.date)}</div><div className="text-xs text-pink-600 font-bold">{b.time}</div></td>
                         <td className="px-3 py-2 min-w-[190px] max-w-[250px]"><div className="font-bold text-gray-900 truncate">{b.customerName}</div><div className="text-[11px] text-gray-400 truncate">{b.customerPhone} · {b.customerEmail || b.user?.email || "No email"}</div><div className="text-[11px] text-orange-600 font-bold truncate">Ref: {bookingReference(b.id)}</div></td>
                         <td className="px-3 py-2 max-w-[250px]"><div className="text-gray-700 truncate font-medium">{serviceSummary(b)}</div>{b.discount ? <div className="text-[11px] text-emerald-600 truncate">-{formatPrice(b.discount)} {b.promoCode ? `(${b.promoCode})` : ""}</div> : null}</td>
-                        <td className="px-3 py-2 whitespace-nowrap text-gray-600">{b.staff?.name || "Any"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-gray-600">{staffDisplay(b)}</td>
                         <td className="px-3 py-2 whitespace-nowrap text-right font-black text-pink-600">{formatPrice(b.totalPrice)}</td>
                         <td className="px-3 py-2 whitespace-nowrap"><span className={cn("px-2 py-0.5 rounded-full text-[10px] font-black", step.tone)}>{step.label}</span></td>
-                        <td className="px-3 py-2 max-w-[260px] text-xs text-gray-500"><div className="line-clamp-3">{b.cancellationReason ? `${b.cancellationReason.startsWith("Customer requested") ? "Ticket: " : "Cancel: "}${b.cancellationReason}` : b.notes?.includes("Customer transfer submitted") ? "Customer marked transfer sent. Verify bank then confirm payment." : b.staffRejectionReason ? `Staff rejected: ${b.staffRejectionReason}` : b.paymentConfirmedAt ? `Paid: ${dateTimeText(b.paymentConfirmedAt)} by ${b.paymentConfirmedBy || "Manager"}` : b.emailVerifiedAt ? "Email verified. Wait for transfer." : "Waiting customer email verification."}</div></td>
+                        <td className="px-3 py-2 max-w-[260px] text-xs text-gray-500"><div className="line-clamp-3">{b.cancellationReason ? `${b.cancellationReason.startsWith("Customer requested") ? "Ticket: " : "Cancel: "}${b.cancellationReason}` : b.notes?.includes("Customer transfer submitted") ? "Customer marked deposit sent. Verify bank then confirm." : b.staffRejectionReason ? `Staff rejected: ${b.staffRejectionReason}` : b.paymentConfirmedAt ? `Deposit confirmed: ${dateTimeText(b.paymentConfirmedAt)} by ${b.paymentConfirmedBy || "Manager"}` : b.depositRequired ? `Deposit required before staff assignment${b.sourceIp ? ` · IP ${b.sourceIp}` : ""}` : b.emailVerifiedAt ? `Ready for staff${b.sourceIp ? ` · IP ${b.sourceIp}` : ""}` : "Waiting customer email verification."}</div></td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
                             <select value={b.status} onChange={(e) => updateStatus(b.id, e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold focus:ring-2 focus:ring-pink-300 outline-none bg-white">
-                              {statuses.map((status) => <option key={status} value={status} disabled={status === "CONFIRMED" && !b.emailVerifiedAt}>{status === "CONFIRMED" ? "Payment received → Confirm" : statusLabels[status]}{status === "CONFIRMED" && !b.emailVerifiedAt ? " (verify email first)" : ""}</option>)}
+                              {statuses.map((status) => <option key={status} value={status} disabled={status === "CONFIRMED" && !b.emailVerifiedAt}>{status === "CONFIRMED" ? (b.depositRequired ? "Deposit received → Confirm" : "Confirm / assign") : statusLabels[status]}{status === "CONFIRMED" && !b.emailVerifiedAt ? " (verify email first)" : ""}</option>)}
                             </select>
                             <button onClick={() => archiveBooking(b.id)} className="h-8 w-8 rounded-lg bg-gray-50 text-gray-500 hover:bg-gray-100 inline-flex items-center justify-center" title="Archive"><Archive size={14} /></button>
                           </div>
@@ -355,8 +367,8 @@ export default function AdminBookings() {
                     <div className="flex items-center gap-2"><input type="checkbox" checked={selectedIds.includes(b.id)} onChange={() => toggleSelected(b.id)} /><button onClick={() => archiveBooking(b.id)} className="h-9 w-9 rounded-xl bg-gray-50 text-gray-500 inline-flex items-center justify-center"><Archive size={14} /></button></div>
                   </div>
                   <div className="mt-2"><span className={cn("px-2 py-1 rounded-full text-[11px] font-black", step.tone)}>{step.label}</span></div>
-                  <div className="mt-2 grid grid-cols-1 gap-1.5 text-xs text-gray-600"><p className="flex items-center gap-1 min-w-0"><Scissors size={12} className="text-pink-500 shrink-0" /><span className="truncate">{serviceSummary(b)}</span></p><p className="flex items-center gap-1 min-w-0"><UserRound size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.staff?.name || "Any Staff"}</span></p><p className="flex items-center gap-1 min-w-0"><Phone size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.customerPhone}</span></p><p className="flex items-center gap-1 min-w-0"><Mail size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.customerEmail || b.user?.email || "No email"}</span></p><p className="text-orange-600 font-bold">Ref: {bookingReference(b.id)}</p>{b.cancellationReason && <p className="text-red-600">{b.cancellationReason.startsWith("Customer requested") ? "Ticket" : "Cancel reason"}: {b.cancellationReason}</p>}{b.notes?.includes("Customer transfer submitted") && <p className="text-emerald-600">Customer marked transfer sent. Verify bank then confirm payment.</p>}{b.staffRejectionReason && <p className="text-orange-600">Staff reject reason: {b.staffRejectionReason}</p>}</div>
-                  <select value={b.status} onChange={(e) => updateStatus(b.id, e.target.value)} className="mt-3 w-full px-3 py-3 rounded-xl border border-gray-200 text-xs font-bold bg-white"><option value={b.status}>{statusLabels[b.status] || b.status}</option>{statuses.filter((s) => s !== b.status).map((status) => <option key={status} value={status} disabled={status === "CONFIRMED" && !b.emailVerifiedAt}>{status === "CONFIRMED" ? "Payment received → Confirm" : statusLabels[status]}</option>)}</select>
+                  <div className="mt-2 grid grid-cols-1 gap-1.5 text-xs text-gray-600"><p className="flex items-center gap-1 min-w-0"><Scissors size={12} className="text-pink-500 shrink-0" /><span className="truncate">{serviceSummary(b)}</span></p><p className="flex items-center gap-1 min-w-0"><UserRound size={12} className="text-pink-500 shrink-0" /><span className="truncate">{staffDisplay(b)}</span></p><p className="flex items-center gap-1 min-w-0"><Phone size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.customerPhone}</span></p><p className="flex items-center gap-1 min-w-0"><Mail size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.customerEmail || b.user?.email || "No email"}</span></p><p className="text-orange-600 font-bold">Ref: {bookingReference(b.id)}</p>{b.cancellationReason && <p className="text-red-600">{b.cancellationReason.startsWith("Customer requested") ? "Ticket" : "Cancel reason"}: {b.cancellationReason}</p>}{b.notes?.includes("Customer transfer submitted") && <p className="text-emerald-600">Customer marked deposit sent. Verify bank then confirm.</p>}{b.staffRejectionReason && <p className="text-orange-600">Staff reject reason: {b.staffRejectionReason}</p>}</div>
+                  <select value={b.status} onChange={(e) => updateStatus(b.id, e.target.value)} className="mt-3 w-full px-3 py-3 rounded-xl border border-gray-200 text-xs font-bold bg-white"><option value={b.status}>{statusLabels[b.status] || b.status}</option>{statuses.filter((s) => s !== b.status).map((status) => <option key={status} value={status} disabled={status === "CONFIRMED" && !b.emailVerifiedAt}>{status === "CONFIRMED" ? (b.depositRequired ? "Deposit received → Confirm" : "Confirm / assign") : statusLabels[status]}</option>)}</select>
                   {b.discount ? <div className="mt-2 flex items-center gap-1 text-emerald-600 text-xs"><Tag size={13} />Discount: -{formatPrice(b.discount)} {b.promoCode ? `(${b.promoCode})` : ""}</div> : null}
                 </div>
               );

@@ -12,6 +12,22 @@ function money(value: number) {
   return `£${Number(value || 0).toFixed(2)}`;
 }
 
+function staffDisplay(booking: Booking) {
+  if (booking.staff?.name) return booking.staff.name;
+  if (booking.requestedStaff?.name) return `Requested: ${booking.requestedStaff.name}`;
+  return "Any Staff";
+}
+
+function statusMeta(booking: Booking) {
+  if (booking.status === "CONFIRMED") return { label: "Confirmed", tone: "bg-emerald-50 text-emerald-700", note: "Your appointment is confirmed. Show this page when you arrive." };
+  if (booking.status === "PENDING" && booking.depositRequired) return { label: "Deposit needed", tone: "bg-orange-50 text-orange-700", note: `A deposit${booking.depositAmount ? ` of ${money(booking.depositAmount)}` : ""} is required before staff assignment.` };
+  if (booking.status === "PENDING") return { label: "Waiting for staff", tone: "bg-sky-50 text-sky-700", note: "Your request is waiting for staff acceptance. You will get an email after it is confirmed." };
+  if (booking.status === "CANCELLED") return { label: "Cancelled", tone: "bg-red-50 text-red-700", note: "This booking has been cancelled." };
+  if (booking.status === "COMPLETED") return { label: "Completed", tone: "bg-blue-50 text-blue-700", note: "This appointment is completed." };
+  if (booking.status === "NO_SHOW") return { label: "No-show", tone: "bg-gray-50 text-gray-700", note: "This booking was marked as no-show." };
+  return { label: booking.status, tone: "bg-gray-50 text-gray-700", note: "" };
+}
+
 type Booking = {
   id: string;
   date: string;
@@ -23,6 +39,9 @@ type Booking = {
   cancellationReason?: string | null;
   notes?: string | null;
   staff?: { name: string } | null;
+  requestedStaff?: { name: string } | null;
+  depositRequired?: boolean;
+  depositAmount?: number | null;
   services?: { service: { name: string; image?: string | null; price: number; duration: number } }[];
 };
 
@@ -104,6 +123,7 @@ export default function MyBookingsPage() {
             <div className="space-y-4">
               {bookings.map((booking) => {
                 const firstService = booking.services?.[0]?.service;
+                const meta = statusMeta(booking);
                 return (
                   <div key={booking.id} className="bg-white rounded-3xl border border-pink-100 p-5 sm:p-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row gap-5">
@@ -118,15 +138,16 @@ export default function MyBookingsPage() {
                         <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                           <div>
                             <h2 className="font-bold text-lg text-gray-900">{booking.services?.map((s) => s.service.name).join(", ") || "Appointment"}</h2>
-                            <p className="text-sm text-gray-500">Staff: {booking.staff?.name || "Any Staff"}</p>
+                            <p className="text-sm text-gray-500">Staff: {staffDisplay(booking)}</p>
                           </div>
-                          <span className="px-3 py-1 rounded-full bg-pink-50 text-pink-700 text-xs font-bold uppercase">{booking.status}</span>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${meta.tone}`}>{meta.label}</span>
                         </div>
                         <div className="grid sm:grid-cols-3 gap-3 text-sm">
                           <div className="flex items-center gap-2 text-gray-600"><CalendarDays size={16} className="text-pink-500" />{new Date(booking.date).toLocaleDateString()}</div>
                           <div className="flex items-center gap-2 text-gray-600"><Clock size={16} className="text-pink-500" />{booking.time}</div>
-                          <div className="flex items-center gap-2 text-gray-600"><Phone size={16} className="text-pink-500" />Show at shop</div>
+                          <div className="flex items-center gap-2 text-gray-600"><Phone size={16} className="text-pink-500" />{booking.status === "CONFIRMED" ? "Show at shop" : "Wait for confirmation"}</div>
                         </div>
+                        {meta.note && <div className={`mt-3 rounded-2xl p-3 text-sm font-semibold ${meta.tone}`}>{meta.note}</div>}
                         {booking.cancellationReason?.startsWith("Customer requested") && (
                           <div className="mt-3 rounded-2xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800 flex gap-2">
                             <AlertCircle size={16} className="shrink-0 mt-0.5" /> Cancellation request sent. Waiting for shop review.
@@ -137,8 +158,8 @@ export default function MyBookingsPage() {
                           {booking.discount ? <span className="flex items-center gap-1 text-green-600 text-sm"><Tag size={14} />-{money(booking.discount)} {booking.promoCode}</span> : null}
                           <span className="text-xs text-gray-400">Booking ID: {booking.id.slice(-8).toUpperCase()}</span>
                           {!["CANCELLED", "COMPLETED", "NO_SHOW"].includes(booking.status) && !booking.cancellationReason?.startsWith("Customer requested") && (
-                            <button onClick={() => { setCancelTarget(booking); setCancelReason(""); }} className="inline-flex items-center gap-1 rounded-full border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-black text-red-600 hover:bg-red-100">
-                              <XCircle size={14} /> Request cancel
+                            <button onClick={() => { setCancelTarget(booking); setCancelReason(""); }} className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-black text-gray-500 hover:border-red-100 hover:bg-red-50 hover:text-red-600">
+                              <XCircle size={14} /> {booking.status === "CONFIRMED" ? "Need to cancel?" : "Request cancel"}
                             </button>
                           )}
                         </div>

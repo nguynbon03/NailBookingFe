@@ -107,5 +107,9 @@ export const api = {
     deleteAccount: (id: string) => fetchAPI("/api/admin/accounts", { method: "DELETE", body: JSON.stringify({ id }) }),
     leaves: () => fetchAPI("/api/staff/leave?scope=all"),
     reviewLeave: (id: string, status: string, managerNote?: string) => fetchAPI("/api/staff/leave", { method: "PUT", body: JSON.stringify({ id, status, managerNote }) }),
+    protection: () => fetchAPI("/api/admin/protection"),
+    updateProtection: (data: any) => fetchAPI("/api/admin/protection", { method: "PUT", body: JSON.stringify(data) }),
+    addBlocklist: (data: any) => fetchAPI("/api/admin/protection", { method: "POST", body: JSON.stringify(data) }),
+    removeBlocklist: (id: string) => fetchAPI("/api/admin/protection", { method: "DELETE", body: JSON.stringify({ id }) }),
   },
 };

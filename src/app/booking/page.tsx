@@ -203,7 +203,7 @@ export default function BookingPage() {
           <div className="max-w-lg w-full bg-white rounded-3xl border border-pink-100 shadow-xl shadow-pink-100/50 p-8 text-center">
             <ShieldCheck size={42} className="mx-auto text-pink-600 mb-4" />
             <h1 className="text-2xl font-black text-gray-900 mb-2">Sign in required</h1>
-            <p className="text-sm text-gray-500 mb-6">Please sign in or register first. Booking email must match the verified account email before a transfer link is sent.</p>
+            <p className="text-sm text-gray-500 mb-6">Please sign in or register first. Booking email must match the verified account email so the shop can protect against spam bookings.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Link href="/login?next=/booking" className="btn-primary">Sign In</Link>
               <Link href="/register" className="btn-secondary">Register</Link>
@@ -217,6 +217,7 @@ export default function BookingPage() {
 
   if (submitted) {
     const reference = verificationInfo?.reference || bookingReference(createdBooking?.id);
+    const depositRequired = verificationInfo?.status === "DEPOSIT_REQUIRED";
     const emailSent = Number(notificationDelivery?.email?.sent || 0) > 0;
     const emailProblem = notificationDelivery?.email?.error || notificationDelivery?.email?.status;
     return (
@@ -230,14 +231,18 @@ export default function BookingPage() {
               </div>
               <h1 className="text-3xl font-black text-gray-900 mb-3">Booking Request Saved</h1>
               <p className="text-gray-600 mb-2 break-words">Thank you, <span className="font-bold text-gray-900">{formData.name}</span>. Your booking request has been received.</p>
-              {emailSent ? (
-                <p className="text-sm text-pink-600 font-bold mb-5 break-words">We sent a secure bank-transfer link to <span className="underline decoration-pink-200">{formData.email}</span>. Open it within 3 minutes to lock one available staff member for this time slot, then transfer with reference {reference}. Admin will confirm payment before the job appears on staff schedule.</p>
+              {depositRequired ? (
+                emailSent ? (
+                  <p className="text-sm text-orange-600 font-bold mb-5 break-words">Anti-spam protection requires a deposit for this booking. We sent the secure deposit link to <span className="underline decoration-orange-200">{formData.email}</span>. Use reference {reference}; staff assignment happens after the shop confirms the deposit.</p>
+                ) : (
+                  <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left text-sm text-amber-800">
+                    <p className="font-black">Deposit link email has not been sent yet.</p>
+                    <p className="mt-1 break-words">Your booking is saved in Admin as <span className="font-bold">Deposit required</span>. The shop can still see it and send/confirm the deposit manually.</p>
+                    {emailProblem ? <p className="mt-2 text-xs break-words opacity-80">Mail status: {String(emailProblem)}</p> : null}
+                  </div>
+                )
               ) : (
-                <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left text-sm text-amber-800">
-                  <p className="font-black">Email has not been sent yet.</p>
-                  <p className="mt-1 break-words">Your booking is saved in Admin as <span className="font-bold">Awaiting transfer</span>, but SMTP email delivery is not configured/successful yet. Admin can still see this booking and send the transfer link manually until SMTP is enabled.</p>
-                  {emailProblem ? <p className="mt-2 text-xs break-words opacity-80">Mail status: {String(emailProblem)}</p> : null}
-                </div>
+                <p className="text-sm text-sky-600 font-bold mb-5 break-words">Your request has been sent to the staff portal. A staff member will accept it if they can take this slot; you will receive a confirmation email after it is assigned.</p>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
@@ -247,7 +252,7 @@ export default function BookingPage() {
                 </div>
                 <div className="rounded-2xl bg-gray-50 p-4">
                   <p className="text-xs uppercase tracking-wide text-gray-400 font-black">Current status</p>
-                  <p className="text-sm font-black text-orange-600">Awaiting transfer link click</p>
+                  <p className={cn("text-sm font-black", depositRequired ? "text-orange-600" : "text-sky-600")}>{depositRequired ? "Deposit required" : "Waiting for staff acceptance"}</p>
                 </div>
                 <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-700 space-y-1 sm:col-span-2">
                   <p><span className="font-bold">Date:</span> {selectedDate} at {selectedTime}</p>
@@ -256,9 +261,9 @@ export default function BookingPage() {
                 </div>
               </div>
 
-              <div className="mt-5 rounded-2xl bg-orange-50 border border-orange-100 p-4 text-left text-sm text-orange-800 flex gap-3">
+              <div className={cn("mt-5 rounded-2xl border p-4 text-left text-sm flex gap-3", depositRequired ? "bg-orange-50 border-orange-100 text-orange-800" : "bg-sky-50 border-sky-100 text-sky-800")}>
                 <AlertCircle size={20} className="shrink-0 mt-0.5" />
-                <p>This request is not confirmed yet. Only transfer after opening the secure email link successfully; admin confirms payment manually and then the assigned staff schedule is updated.</p>
+                <p>{depositRequired ? "This request is not assigned yet. Complete the deposit step first, then the shop/staff can confirm it." : "This request is not confirmed yet. Staff have been notified and can accept the booking from their portal."}</p>
               </div>
               <Link href="/" className="btn-primary inline-flex mt-6">Back to Home</Link>
             </div>
@@ -440,7 +445,7 @@ export default function BookingPage() {
                         <div className="min-w-0">
                           <p className="text-xs font-black uppercase tracking-wide text-pink-500">Verified account email</p>
                           <p className="mt-1 break-all text-base sm:text-lg font-black leading-snug text-gray-900">{user?.email}</p>
-                          <p className="mt-1 text-sm text-gray-500">The secure transfer link is sent only to this signed-in verified account.</p>
+                          <p className="mt-1 text-sm text-gray-500">This verified account is used for anti-spam protection, booking updates, and any deposit link if required.</p>
                         </div>
                       </div>
                       <div className="rounded-2xl bg-white/80 p-3 sm:p-4 border border-pink-100">

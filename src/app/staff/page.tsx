@@ -21,6 +21,9 @@ type Booking = {
   discount?: number | null;
   paymentConfirmedAt?: string | null;
   paymentConfirmedBy?: string | null;
+  depositRequired?: boolean;
+  depositAmount?: number | null;
+  requestedStaff?: { name: string } | null;
   staffRejectionReason?: string | null;
   staffRejectedAt?: string | null;
   staff?: { name: string } | null;
@@ -43,6 +46,10 @@ function todayISO() {
 
 function bookingServices(booking: Booking) {
   return (booking.services || []).map((item) => item.service?.name).filter(Boolean).join(", ") || "Service";
+}
+
+function staffRequestLabel(booking: Booking) {
+  return booking.requestedStaff?.name ? `Requested: ${booking.requestedStaff.name}` : "Any available staff";
 }
 
 function statusClass(status: string) {
@@ -195,20 +202,20 @@ export default function StaffPortalPage() {
           <div className="flex items-start justify-between gap-3 mb-4 sm:mb-8">
             <div className="min-w-0">
               <p className="text-pink-500 font-black text-xs sm:text-sm uppercase tracking-wide mb-1">Staff Portal</p>
-              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">Jobs, Notifications & Leave</h1>
-              <p className="hidden sm:block text-gray-500 mt-2">Paid jobs are automated into staff notifications. Leave requests block your approved days from availability.</p>
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">Booking Requests, Schedule & Leave</h1>
+              <p className="hidden sm:block text-gray-500 mt-2">Accept verified booking requests assigned to you or open to any staff. Deposit-required bookings appear after manager confirmation.</p>
             </div>
             <button onClick={logout} className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold inline-flex items-center gap-1.5 shrink-0"><LogOut size={15} />Logout</button>
           </div>
 
           <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
-            <b>Automation rule:</b> once Owner/Manager confirms payment, all staff receive a notification and the job appears below. Accept only assigns the job internally. If you cannot take it, submit a reason so Manager can reassign it without cancelling the paid customer booking.
+            <b>Automation rule:</b> booking requests appear here after customer verification. If anti-spam deposit is required, Manager confirms the deposit first. Accepting a request confirms and assigns it to your schedule.
           </div>
 
           {error && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>}
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-8">
-            <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><ClipboardList className="text-pink-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{availableBookings.length}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Open paid jobs</p></div>
+            <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><ClipboardList className="text-pink-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{availableBookings.length}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Open requests</p></div>
             <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><CalendarDays className="text-emerald-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{myBookings.length}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Mine</p></div>
             <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><Bell className="text-amber-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{notifications.filter((n) => !n.read).length}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Unread</p></div>
             <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><Plane className="text-sky-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{pendingLeaves}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Leave pending</p></div>
@@ -218,19 +225,19 @@ export default function StaffPortalPage() {
             <div className="space-y-4 sm:space-y-6 min-w-0">
               <section className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-pink-100 shadow-sm">
                 <div className="flex items-center justify-between mb-4 sm:mb-5">
-                  <h2 className="text-lg sm:text-xl font-black text-gray-900">Open Paid Jobs</h2>
+                  <h2 className="text-lg sm:text-xl font-black text-gray-900">Open Booking Requests</h2>
                   <button onClick={refresh} className="h-10 px-3 rounded-xl bg-pink-50 text-pink-600 text-xs sm:text-sm font-bold">Refresh</button>
                 </div>
-                {availableBookings.length === 0 ? <p className="text-sm text-gray-400">No open paid jobs right now.</p> : <div className="space-y-2.5 sm:space-y-3">
+                {availableBookings.length === 0 ? <p className="text-sm text-gray-400">No open booking requests right now.</p> : <div className="space-y-2.5 sm:space-y-3">
                   {availableBookings.map((booking) => (
                     <div key={booking.id} className="rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
                       <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1.5"><span className="font-black text-gray-900 truncate">{booking.customerName}</span><span className={statusClass(booking.status)}>Paid / Confirmed</span></div>
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5"><span className="font-black text-gray-900 truncate">{booking.customerName}</span><span className={statusClass(booking.status)}>Waiting staff</span></div>
                         <p className="text-sm text-gray-600 truncate">{bookingServices(booking)}</p>
                         <p className="text-xs text-gray-400 mt-1"><Clock size={12} className="inline mr-1" />{shortDate(booking.date)} {booking.time} · {formatPrice(booking.totalPrice)}</p>
-                        {booking.paymentConfirmedAt && <p className="text-[11px] text-emerald-600 font-bold mt-1">Payment confirmed by {booking.paymentConfirmedBy || "Manager"}</p>}
+                        <p className="text-[11px] text-sky-600 font-bold mt-1">{staffRequestLabel(booking)}</p>{booking.paymentConfirmedAt && <p className="text-[11px] text-emerald-600 font-bold mt-1">Deposit confirmed by {booking.paymentConfirmedBy || "Manager"}</p>}
                       </div>
-                      <button onClick={() => runAction(booking.id, "claim")} className="btn-primary w-full lg:w-auto min-h-11 inline-flex items-center justify-center gap-2"><UserCheck size={16} />Accept job</button>
+                      <button onClick={() => runAction(booking.id, "claim")} className="btn-primary w-full lg:w-auto min-h-11 inline-flex items-center justify-center gap-2"><UserCheck size={16} />Accept booking</button>
                     </div>
                   ))}
                 </div>}
@@ -238,7 +245,7 @@ export default function StaffPortalPage() {
 
               <section className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-pink-100 shadow-sm">
                 <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-4 sm:mb-5">My Schedule</h2>
-                {myBookings.length === 0 ? <p className="text-sm text-gray-400">No assigned jobs yet.</p> : <div className="space-y-2.5 sm:space-y-3">
+                {myBookings.length === 0 ? <p className="text-sm text-gray-400">No confirmed jobs assigned yet.</p> : <div className="space-y-2.5 sm:space-y-3">
                   {myBookings.map((booking) => (
                     <div key={booking.id} className="rounded-2xl border border-gray-100 p-3 sm:p-4">
                       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
