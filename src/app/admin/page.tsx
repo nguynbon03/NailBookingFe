@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
 
-type SeriesItem = { label: string; revenue: number };
+type SeriesItem = { label: string; revenue: number; count: number };
 
 type DashboardData = {
   stats: {
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
 
   const stats = data?.stats || { totalUsers: 0, customers: 0, adminUsers: 0, bookings: 0, revenue: 0, services: 0, activeServices: 0, activePromoCodes: 0 };
   const series = data?.revenueSeries?.[period] || [];
-  const maxRevenue = useMemo(() => Math.max(1, ...series.map((item) => item.revenue)), [series]);
+  const maxCount = useMemo(() => Math.max(1, ...series.map((item) => item.count || 0)), [series]);
 
   const cards = [
     { label: "Total Users", value: stats.totalUsers, sub: `${stats.customers} customers · ${stats.adminUsers} staff/admin`, icon: Users, color: "from-pink-400 to-rose-400" },
@@ -82,8 +82,8 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
             <div>
-              <h3 className="font-bold text-gray-900">Revenue Trend</h3>
-              <p className="text-xs text-gray-400">Grouped like a bank statement by selected period.</p>
+              <h3 className="font-bold text-gray-900">Booking Count / Revenue Trend</h3>
+              <p className="text-xs text-gray-400">Grouped by day, month, or year so admin can see how many bookings were made.</p>
             </div>
             <div className="flex gap-2 bg-gray-50 rounded-xl p-1">
               {(["daily", "monthly", "yearly"] as const).map((item) => (
@@ -93,12 +93,12 @@ export default function AdminDashboard() {
           </div>
           <div className="space-y-3">
             {series.map((item) => (
-              <div key={item.label} className="grid grid-cols-[68px_1fr_72px] sm:grid-cols-[92px_1fr_90px] items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+              <div key={item.label} className="grid grid-cols-[76px_1fr_126px] sm:grid-cols-[96px_1fr_160px] items-center gap-2 sm:gap-3 text-xs sm:text-sm">
                 <span className="text-gray-500 font-medium">{item.label}</span>
                 <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-r from-pink-500 to-rose-500" style={{ width: `${Math.max(2, (item.revenue / maxRevenue) * 100)}%` }} />
+                  <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-pink-500" style={{ width: `${Math.max(2, ((item.count || 0) / maxCount) * 100)}%` }} />
                 </div>
-                <span className="text-right font-bold text-gray-900">{money(item.revenue)}</span>
+                <span className="text-right font-bold text-gray-900">{item.count || 0} bookings · {money(item.revenue)}</span>
               </div>
             ))}
           </div>
