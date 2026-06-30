@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import ContactBubble from "@/components/ContactBubble";
 
 const inter = Inter({ variable: "--font-sans", subsets: ["latin"] });
 
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         <AuthProvider>{children}</AuthProvider>
+        <ContactBubble />
       </body>
     </html>
   );
