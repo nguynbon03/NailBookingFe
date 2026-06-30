@@ -24,6 +24,7 @@ export const api = {
       fetchAPI("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
     register: (data: any) =>
       fetchAPI("/api/auth/register", { method: "POST", body: JSON.stringify(data) }),
+    verifyEmail: (token: string) => fetchAPI("/api/auth/verify-email", { method: "POST", body: JSON.stringify({ token }) }),
     me: () => fetchAPI("/api/auth/me"),
   },
   services: {
@@ -49,12 +50,13 @@ export const api = {
     create: (data: any) => fetchAPI("/api/bookings", { method: "POST", body: JSON.stringify(data) }),
     list: () => fetchAPI("/api/bookings"),
     my: () => fetchAPI("/api/bookings?mine=1"),
+    verify: (token: string) => fetchAPI("/api/bookings/verify", { method: "POST", body: JSON.stringify({ token }) }),
     updateStatus: (id: string, status: string, staffId?: string | null) => fetchAPI("/api/bookings", { method: "PUT", body: JSON.stringify({ id, status, staffId }) }),
   },
   staff: {
     list: () => fetchAPI("/api/staff").catch(() => ({ staff: [] })),
     dashboard: () => fetchAPI("/api/staff/bookings"),
-    action: (id: string, action: string) => fetchAPI("/api/staff/bookings", { method: "PUT", body: JSON.stringify({ id, action }) }),
+    action: (id: string, action: string, cancellationReason?: string | null) => fetchAPI("/api/staff/bookings", { method: "PUT", body: JSON.stringify({ id, action, cancellationReason }) }),
     availability: () => fetchAPI("/api/staff/availability"),
     createAvailability: (data: any) => fetchAPI("/api/staff/availability", { method: "POST", body: JSON.stringify(data) }),
     updateAvailability: (data: any) => fetchAPI("/api/staff/availability", { method: "PUT", body: JSON.stringify(data) }),
@@ -63,7 +65,7 @@ export const api = {
   admin: {
     stats: () => fetchAPI("/api/admin/stats"),
     bookings: () => fetchAPI("/api/bookings"),
-    updateBookingStatus: (id: string, status: string, staffId?: string | null) => fetchAPI("/api/bookings", { method: "PUT", body: JSON.stringify({ id, status, staffId }) }),
+    updateBookingStatus: (id: string, status: string, staffId?: string | null, cancellationReason?: string | null) => fetchAPI("/api/bookings", { method: "PUT", body: JSON.stringify({ id, status, staffId, cancellationReason }) }),
     services: () => fetchAPI("/api/admin/services"),
     createService: (data: any) => fetchAPI("/api/admin/services", { method: "POST", body: JSON.stringify(data) }),
     updateService: (data: any) => fetchAPI("/api/admin/services", { method: "PUT", body: JSON.stringify(data) }),

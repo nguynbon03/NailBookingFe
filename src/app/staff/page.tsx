@@ -27,6 +27,7 @@ type Notification = { id: string; title: string; message: string; read: boolean;
 type Availability = { id: string; dayOfWeek: number | null; date: string | null; startTime: string; endTime: string; active: boolean };
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const cancellationReasonHint = "Shop have Problem / Staff have problem / Shop is too busy / No Reason / Other";
 const emptyAvailability = { dayOfWeek: "1", date: "", startTime: "09:00", endTime: "18:00", active: true };
 
 function bookingServices(booking: Booking) {
@@ -91,13 +92,19 @@ export default function StaffPortalPage() {
     refresh();
   }, [authLoading, user?.id]);
 
-  const runAction = async (id: string, action: string) => {
+  const runAction = async (id: string, action: string, cancellationReason?: string | null) => {
     try {
-      await api.staff.action(id, action);
+      await api.staff.action(id, action, cancellationReason);
       refresh();
     } catch (err: any) {
       setError(err.message || "Action failed");
     }
+  };
+
+  const runCancelAction = (id: string) => {
+    const reason = window.prompt(`Reason for cancelling (${cancellationReasonHint})`, "Staff have problem");
+    if (reason === null) return;
+    runAction(id, "cancel", reason.trim() || "Staff have problem");
   };
 
   const saveAvailability = async () => {
@@ -183,7 +190,7 @@ export default function StaffPortalPage() {
                         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                           {booking.status === "PENDING" && <button onClick={() => runAction(booking.id, "confirm")} className="btn-primary min-h-11 text-sm">Confirm</button>}
                           {booking.status === "CONFIRMED" && <button onClick={() => runAction(booking.id, "complete")} className="btn-primary min-h-11 text-sm"><CheckCircle size={14} className="inline mr-1" />Complete</button>}
-                          <button onClick={() => runAction(booking.id, "cancel")} className="btn-secondary min-h-11 text-sm">Cancel</button>
+                          <button onClick={() => runCancelAction(booking.id)} className="btn-secondary min-h-11 text-sm">Cancel</button>
                           <button onClick={() => runAction(booking.id, "no_show")} className="btn-secondary min-h-11 text-sm">No-show</button>
                         </div>
                       </div>

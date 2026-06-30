@@ -18,6 +18,10 @@ type Booking = {
   totalPrice: number;
   discount: number | null;
   promoCode: string | null;
+  cancellationReason?: string | null;
+  emailVerifiedAt?: string | null;
+  emailVerificationSentAt?: string | null;
+  emailVerificationExpiresAt?: string | null;
   status: string;
   staff?: { name: string } | null;
   user?: { name: string; email: string; role: string } | null;
@@ -25,6 +29,8 @@ type Booking = {
 };
 
 const statuses = ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"];
+const cancellationReasons = ["Shop have Problem", "Staff have problem", "Shop is too busy", "No Reason", "Other"];
+const defaultCancellationReason = "No Reason";
 const statusLabels: Record<string, string> = {
   PENDING: "Awaiting payment",
   CONFIRMED: "Confirmed",
@@ -62,11 +68,20 @@ export default function AdminBookings() {
 
   useEffect(() => { refresh(); }, []);
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, status: string, cancellationReason?: string | null) => {
     const old = bookings;
-    setBookings((items) => items.map((b) => b.id === id ? { ...b, status } : b));
+    let reason = status === "CANCELLED" ? (cancellationReason || defaultCancellationReason) : null;
+    if (status === "CANCELLED" && !cancellationReason) {
+      const entered = window.prompt(`Reason for cancelling (${cancellationReasons.join(" / ")})`, defaultCancellationReason);
+      if (entered === null) return;
+      reason = entered.trim() || defaultCancellationReason;
+    }
+    setBookings((items) => items.map((b) => b.id === id ? { ...b, status, cancellationReason: reason } : b));
     try {
-      await api.admin.updateBookingStatus(id, status);
+      const result = await api.admin.updateBookingStatus(id, status, undefined, reason);
+      if (result?.booking) {
+        setBookings((items) => items.map((b) => b.id === id ? { ...b, ...result.booking } : b));
+      }
     } catch (err: any) {
       setBookings(old);
       setError(err.message || "Failed to update booking status");
@@ -132,7 +147,7 @@ export default function AdminBookings() {
                     <th className="px-3 py-2 font-black">Staff</th>
                     <th className="px-3 py-2 font-black text-right">Revenue</th>
                     <th className="px-3 py-2 font-black">Status</th>
-                    <th className="px-3 py-2 font-black w-36">Update</th>
+                    <th className="px-3 py-2 font-black w-52">Update</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -145,7 +160,7 @@ export default function AdminBookings() {
                       <td className="px-3 py-2 min-w-[190px] max-w-[240px]">
                         <div className="font-bold text-gray-900 truncate">{b.customerName}</div>
                         <div className="text-[11px] text-gray-400 truncate">{b.customerPhone} · {b.customerEmail || b.user?.email || "No email"}</div>
-                        <div className="text-[11px] text-orange-600 font-bold truncate">Ref: {bookingReference(b.id)}{b.status === "PENDING" ? " · Wait for deposit" : ""}</div>
+                        <div className="text-[11px] text-orange-600 font-bold truncate">Ref: {bookingReference(b.id)}{b.status === "PENDING" ? (b.emailVerifiedAt ? " · Email verified" : " · Awaiting email verification") : ""}</div>
                       </td>
                       <td className="px-3 py-2 max-w-[260px]">
                         <div className="text-gray-700 truncate font-medium">{serviceSummary(b)}</div>
@@ -156,7 +171,7 @@ export default function AdminBookings() {
                       <td className="px-3 py-2 whitespace-nowrap"><span className={statusBadge(b.status)}>{statusLabels[b.status] || b.status}</span></td>
                       <td className="px-3 py-2">
                         <select value={b.status} onChange={(e) => updateStatus(b.id, e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold focus:ring-2 focus:ring-pink-300 outline-none bg-white">
-                          {statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
+                          {statuses.map((status) => <option key={status} value={status} disabled={status === "CONFIRMED" && !b.emailVerifiedAt}>{statusLabels[status]}{status === "CONFIRMED" && !b.emailVerifiedAt ? " (verify email first)" : ""}</option>)}
                         </select>
                       </td>
                     </tr>
@@ -181,7 +196,7 @@ export default function AdminBookings() {
                     </div>
                   </div>
                   <select value={b.status} onChange={(e) => updateStatus(b.id, e.target.value)} className="px-2 py-2 rounded-xl border border-gray-200 text-xs font-bold bg-white shrink-0 max-w-[150px]">
-                    {statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
+                    {statuses.map((status) => <option key={status} value={status} disabled={status === "CONFIRMED" && !b.emailVerifiedAt}>{statusLabels[status]}{status === "CONFIRMED" && !b.emailVerifiedAt ? " (verify email first)" : ""}</option>)}
                   </select>
                 </div>
 
@@ -190,7 +205,7 @@ export default function AdminBookings() {
                   <p className="flex items-center gap-1 min-w-0"><UserRound size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.staff?.name || "Any Staff"}</span></p>
                   <p className="flex items-center gap-1 min-w-0"><Phone size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.customerPhone}</span></p>
                   <p className="flex items-center gap-1 min-w-0"><Mail size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.customerEmail || b.user?.email || "No email"}</span></p>
-                  <p className="text-orange-600 font-bold">Ref: {bookingReference(b.id)}{b.status === "PENDING" ? " · Wait for deposit" : ""}</p>
+                  <p className="text-orange-600 font-bold">Ref: {bookingReference(b.id)}{b.status === "PENDING" ? (b.emailVerifiedAt ? " · Email verified" : " · Awaiting email verification") : ""}</p>
                 </div>
 
                 {b.discount ? <div className="mt-2 flex items-center gap-1 text-emerald-600 text-xs"><Tag size={13} />Discount: -{formatPrice(b.discount)} {b.promoCode ? `(${b.promoCode})` : ""}</div> : null}

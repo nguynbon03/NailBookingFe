@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Clock, CalendarDays, User, Phone, Mail, MessageSquare,
   Check, Sparkles, Upload, Tag, ShieldCheck, Heart, Stethoscope, ImagePlus,
-  X, Star, QrCode, CreditCard, AlertCircle
+  X, Star, AlertCircle
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -23,24 +23,12 @@ const timeSlots = [
   "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
 ];
 
-const DEPOSIT_AMOUNT = Number(process.env.NEXT_PUBLIC_BOOKING_DEPOSIT_AMOUNT || "10");
-const PAYMENT_ACCOUNT_LABEL = process.env.NEXT_PUBLIC_PAYMENT_ACCOUNT_LABEL || "Nail Lounge deposit";
-const PAYMENT_QR_IMAGE_URL = process.env.NEXT_PUBLIC_PAYMENT_QR_IMAGE_URL || "";
-
-function isGmailAddress(email: string) {
-  return /^[A-Z0-9._%+-]+@gmail\.com$/i.test(email.trim());
+function isEmailAddress(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
 function bookingReference(id?: string) {
   return id ? `NL-${id.slice(-8).toUpperCase()}` : "NL-PENDING";
-}
-
-function buildQrImageUrl(payment: any, booking: any, customerName: string) {
-  if (PAYMENT_QR_IMAGE_URL) return PAYMENT_QR_IMAGE_URL;
-  const reference = payment?.reference || bookingReference(booking?.id);
-  const amount = payment?.depositAmount || DEPOSIT_AMOUNT || 10;
-  const payload = `${PAYMENT_ACCOUNT_LABEL}\nDeposit: £${amount}\nReference: ${reference}\nCustomer: ${customerName}`;
-  return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&data=${encodeURIComponent(payload)}`;
 }
 
 type Staff = { id: string; name: string; email: string; role: string; active: boolean; avatar?: string | null };
@@ -66,7 +54,7 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<any | null>(null);
-  const [paymentInfo, setPaymentInfo] = useState<any | null>(null);
+  const [verificationInfo, setVerificationInfo] = useState<any | null>(null);
   const [promoError, setPromoError] = useState("");
 
   useEffect(() => {
@@ -93,7 +81,7 @@ export default function BookingPage() {
   const service = services.find((s) => s.id === selectedService || s.name === selectedService);
   const basePrice = service ? service.price : 0;
   const finalPrice = Math.max(0, basePrice - discount);
-  const gmailValid = isGmailAddress(formData.email);
+  const emailValid = isEmailAddress(formData.email);
 
   useEffect(() => {
     setSelectedTime("");
@@ -161,7 +149,7 @@ export default function BookingPage() {
         termsAccepted: formData.termsAccepted,
       });
       setCreatedBooking(result.booking || null);
-      setPaymentInfo(result.payment || null);
+      setVerificationInfo(result.verification || null);
       setSubmitted(true);
     } catch (e: any) {
       alert(e.message || "Booking failed");
@@ -176,50 +164,42 @@ export default function BookingPage() {
     (step === 3 && selectedTime) ||
     step === 4;
 
-  const step4Valid = formData.name && formData.phone && gmailValid && formData.termsAccepted;
+  const step4Valid = formData.name && formData.phone && emailValid && formData.termsAccepted;
 
   if (submitted) {
-    const reference = paymentInfo?.reference || bookingReference(createdBooking?.id);
-    const deposit = paymentInfo?.depositAmount || DEPOSIT_AMOUNT || 10;
-    const qrUrl = buildQrImageUrl(paymentInfo, createdBooking, formData.name);
+    const reference = verificationInfo?.reference || bookingReference(createdBooking?.id);
     return (
       <>
         <Navbar />
         <main className="pt-16 min-h-screen bg-gradient-to-b from-pink-50/30 to-white flex items-center justify-center">
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
             <div className="bg-white rounded-3xl border border-pink-100 shadow-xl shadow-pink-100/60 p-5 sm:p-8 text-center">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white mx-auto mb-5 shadow-lg shadow-pink-200">
-                <CreditCard size={38} />
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white mx-auto mb-5 shadow-lg shadow-pink-200">
+                <Mail size={38} />
               </div>
-              <h1 className="text-3xl font-black text-gray-900 mb-3">Booking Awaiting Deposit</h1>
+              <h1 className="text-3xl font-black text-gray-900 mb-3">Check Your Email</h1>
               <p className="text-gray-600 mb-2">Thank you, {formData.name}. Your booking request has been received.</p>
-              <p className="text-sm text-orange-600 font-bold mb-5">Staff will only see this appointment after admin confirms the deposit/payment.</p>
+              <p className="text-sm text-pink-600 font-bold mb-5">Please click the verification link sent to {formData.email}. Staff will not see or hold this appointment until email verification and shop/admin confirmation are complete.</p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-[260px_1fr] gap-5 items-center text-left">
-                <div className="rounded-3xl bg-pink-50 border border-pink-100 p-4 flex flex-col items-center">
-                  <div className="flex items-center gap-2 text-pink-600 font-black mb-3"><QrCode size={18} /> Scan to pay</div>
-                  <img src={qrUrl} alt="Deposit payment QR" className="w-56 h-56 rounded-2xl bg-white object-contain border border-pink-100" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+                <div className="rounded-2xl bg-gray-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-400 font-black">Booking reference</p>
+                  <p className="text-2xl font-black text-gray-900 tracking-wide">{reference}</p>
                 </div>
-                <div className="space-y-3">
-                  <div className="rounded-2xl bg-gray-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-gray-400 font-black">Deposit amount</p>
-                    <p className="text-3xl font-black text-pink-600">£{deposit}</p>
-                  </div>
-                  <div className="rounded-2xl bg-gray-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-gray-400 font-black">Payment reference</p>
-                    <p className="text-2xl font-black text-gray-900 tracking-wide">{reference}</p>
-                  </div>
-                  <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-700 space-y-1">
-                    <p><span className="font-bold">Date:</span> {selectedDate} at {selectedTime}</p>
-                    <p><span className="font-bold">Service:</span> {service?.name}</p>
-                    <p><span className="font-bold">Email:</span> {formData.email}</p>
-                  </div>
+                <div className="rounded-2xl bg-gray-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-400 font-black">Current status</p>
+                  <p className="text-sm font-black text-orange-600">Awaiting email verification</p>
+                </div>
+                <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-700 space-y-1 sm:col-span-2">
+                  <p><span className="font-bold">Date:</span> {selectedDate} at {selectedTime}</p>
+                  <p><span className="font-bold">Service:</span> {service?.name}</p>
+                  <p><span className="font-bold">Email:</span> {formData.email}</p>
                 </div>
               </div>
 
               <div className="mt-5 rounded-2xl bg-orange-50 border border-orange-100 p-4 text-left text-sm text-orange-800 flex gap-3">
                 <AlertCircle size={20} className="shrink-0 mt-0.5" />
-                <p>Please include the reference <b>{reference}</b> when paying. Admin will confirm the booking after checking the payment. Until then, the slot is not assigned to staff.</p>
+                <p>If a shop wants deposit/QR payment, the owner can request it separately or enable payment integration later. This request currently uses email verification first to prevent fake bookings and calendar blocking.</p>
               </div>
               <Link href="/" className="btn-primary inline-flex mt-6">Back to Home</Link>
             </div>
@@ -398,9 +378,9 @@ export default function BookingPage() {
                     <div>
                       <div className="relative">
                         <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input placeholder="Gmail Address *" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className={cn("w-full pl-10 p-4 rounded-xl border focus:ring-2 outline-none", formData.email && !gmailValid ? "border-red-300 focus:ring-red-200" : "border-pink-200 focus:ring-pink-300")} />
+                        <input placeholder="Registered Email Address *" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className={cn("w-full pl-10 p-4 rounded-xl border focus:ring-2 outline-none", formData.email && !emailValid ? "border-red-300 focus:ring-red-200" : "border-pink-200 focus:ring-pink-300")} />
                       </div>
-                      <p className={cn("text-xs mt-1.5", formData.email && !gmailValid ? "text-red-500" : "text-gray-400")}>Online booking requires a valid Gmail address plus deposit confirmation to prevent fake bookings.</p>
+                      <p className={cn("text-xs mt-1.5", formData.email && !emailValid ? "text-red-500" : "text-gray-400")}>Use the same email you registered with. We will send a verification link to this email before the shop can confirm the booking.</p>
                     </div>
 
                     {/* Staff summary */}

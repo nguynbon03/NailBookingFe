@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { KeyRound, Mail, Phone, Search, ShieldCheck, UserRound, UsersRound } from "lucide-react";
 
 type Account = {
@@ -28,6 +29,7 @@ function shortDate(value: string) {
 }
 
 export default function AdminAccounts() {
+  const { user } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -57,7 +59,16 @@ export default function AdminAccounts() {
     });
   }, [accounts, query, role]);
 
+  const canResetAccount = (account: Account) => {
+    if (user?.role === "ADMIN") return true;
+    return !["ADMIN", "MANAGER"].includes(account.role);
+  };
+
   const resetPassword = async (account: Account) => {
+    if (!canResetAccount(account)) {
+      setError("Only ADMIN can reset ADMIN/MANAGER accounts");
+      return;
+    }
     const newPassword = passwords[account.id] || "";
     if (newPassword.length < 6) {
       setError("Password must be at least 6 characters");
@@ -134,8 +145,8 @@ export default function AdminAccounts() {
                       <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{shortDate(account.createdAt)}</td>
                       <td className="px-3 py-2">
                         <div className="flex gap-2">
-                          <input type="text" value={passwords[account.id] || ""} onChange={(e) => setPasswords({ ...passwords, [account.id]: e.target.value })} placeholder="New password" className="min-w-0 flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-pink-300" />
-                          <button onClick={() => resetPassword(account)} disabled={resettingId === account.id} className="px-3 py-2 rounded-xl bg-gray-900 text-white text-xs font-bold whitespace-nowrap">{resettingId === account.id ? "..." : "Reset"}</button>
+                          <input type="text" value={passwords[account.id] || ""} onChange={(e) => setPasswords({ ...passwords, [account.id]: e.target.value })} placeholder={canResetAccount(account) ? "New password" : "Admin only"} disabled={!canResetAccount(account)} className="min-w-0 flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-pink-300 disabled:bg-gray-100 disabled:text-gray-400" />
+                          <button onClick={() => resetPassword(account)} disabled={resettingId === account.id || !canResetAccount(account)} className="px-3 py-2 rounded-xl bg-gray-900 text-white text-xs font-bold whitespace-nowrap disabled:bg-gray-300">{resettingId === account.id ? "..." : "Reset"}</button>
                         </div>
                       </td>
                     </tr>
@@ -161,8 +172,8 @@ export default function AdminAccounts() {
                   {account.staffProfile && <span className="inline-flex items-center gap-1"><UsersRound size={12} />{account.staffProfile.active ? "Active staff" : "Inactive staff"}</span>}
                 </div>
                 <div className="grid grid-cols-[1fr_auto] gap-2">
-                  <input type="text" value={passwords[account.id] || ""} onChange={(e) => setPasswords({ ...passwords, [account.id]: e.target.value })} placeholder="New password" className="min-w-0 px-3 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-pink-300" />
-                  <button onClick={() => resetPassword(account)} disabled={resettingId === account.id} className="px-3 py-3 rounded-xl bg-gray-900 text-white text-xs font-bold inline-flex items-center gap-1"><KeyRound size={13} />{resettingId === account.id ? "..." : "Reset"}</button>
+                  <input type="text" value={passwords[account.id] || ""} onChange={(e) => setPasswords({ ...passwords, [account.id]: e.target.value })} placeholder={canResetAccount(account) ? "New password" : "Admin only"} disabled={!canResetAccount(account)} className="min-w-0 px-3 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-pink-300 disabled:bg-gray-100 disabled:text-gray-400" />
+                  <button onClick={() => resetPassword(account)} disabled={resettingId === account.id || !canResetAccount(account)} className="px-3 py-3 rounded-xl bg-gray-900 text-white text-xs font-bold inline-flex items-center gap-1 disabled:bg-gray-300"><KeyRound size={13} />{resettingId === account.id ? "..." : "Reset"}</button>
                 </div>
               </div>
             ))}

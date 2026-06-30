@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { api } from "@/lib/api";
 
-interface User { id: string; email: string; name: string; role: string; }
+interface User { id: string; email: string; name: string; role: string; emailVerifiedAt?: string | null; }
 interface AuthCtx { user: User | null; login: (email: string, password: string) => Promise<User>; register: (data: any) => Promise<void>; logout: () => void; loading: boolean; }
 
 const AuthContext = createContext<AuthCtx | undefined>(undefined);
