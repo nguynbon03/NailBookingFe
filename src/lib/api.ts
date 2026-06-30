@@ -3,11 +3,13 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api.bookingnail.ove
 export async function fetchAPI(path: string, options: RequestInit = {}) {
   const url = `${API_BASE}${path}`;
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const headers = {
-    "Content-Type": "application/json",
+  const headers: Record<string, string> = {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
+    ...((options.headers as Record<string, string>) || {}),
   };
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
   const res = await fetch(url, { ...options, headers });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Request failed" }));
@@ -28,8 +30,16 @@ export const api = {
     create: (data: any) => fetchAPI("/api/bookings", { method: "POST", body: JSON.stringify(data) }),
     list: () => fetchAPI("/api/bookings"),
   },
+  staff: {
+    list: () => fetchAPI("/api/staff").catch(() => ({ staff: [] })),
+  },
   admin: {
     stats: () => fetchAPI("/api/admin/stats"),
+    bookings: () => fetchAPI("/api/bookings"),
     services: () => fetchAPI("/api/admin/services"),
+    createService: (data: any) => fetchAPI("/api/admin/services", { method: "POST", body: JSON.stringify(data) }),
+    updateService: (data: any) => fetchAPI("/api/admin/services", { method: "PUT", body: JSON.stringify(data) }),
+    deleteService: (id: string) => fetchAPI("/api/admin/services", { method: "DELETE", body: JSON.stringify({ id }) }),
+    staff: () => fetchAPI("/api/admin/staff").catch(() => ({ staff: [] })),
   },
 };

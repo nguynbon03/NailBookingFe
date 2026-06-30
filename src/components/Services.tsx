@@ -1,104 +1,84 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Hand, Footprints, Palette, Sparkles, Gem, Wand2, ArrowRight, Clock } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Hand,
+  Footprints,
+  Sparkles,
+  Scissors,
+  Star,
+  Droplets,
+  ChevronDown,
+  Clock,
+  ArrowRight,
+} from "lucide-react";
 import Link from "next/link";
 import salonData from "@/data/salon-data.json";
 
-const iconMap: Record<string, React.ElementType> = {
-  "Acrylic & Gel Polish - New Set": Gem,
-  "Manicure & Gel Polish": Hand,
-  "Gel Polish - Hands": Sparkles,
-  "Deluxe Pedicure & Gel Polish": Footprints,
-  "Nail Art": Palette,
-  "Acrylic & Gel Polish - Infill": Wand2,
-};
+const categories = [
+  { key: "extensions_hands", label: "Nail Extensions (Hands)", icon: Hand, services: salonData.categories.extensions_hands },
+  { key: "extensions_feet", label: "Nail Extensions (Feet)", icon: Footprints, services: salonData.categories.extensions_feet },
+  { key: "gel_polish", label: "Gel Polish", icon: Sparkles, services: salonData.categories.gel_polish },
+  { key: "mani_pedi", label: "Mani & Pedi", icon: Scissors, services: salonData.categories.mani_pedi },
+  { key: "extras", label: "Extras", icon: Star, services: salonData.categories.extras },
+  { key: "waxing", label: "Waxing", icon: Droplets, services: salonData.categories.waxing },
+];
 
-const container = {
-  hidden: {},
-  show: {
-    transition: { staggerChildren: 0.1 },
-  },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 30 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-};
+const gradients = [
+  "from-pink-500 to-rose-400","from-violet-500 to-purple-400","from-emerald-500 to-teal-400",
+  "from-amber-500 to-orange-400","from-sky-500 to-cyan-400","from-fuchsia-500 to-pink-400",
+];
 
 export default function Services() {
-  return (
-    <section id="services" className="section-padding bg-gradient-to-b from-white via-pink-50/50 to-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-16"
-        >
-          <p className="text-pink-500 font-semibold mb-3">What We Offer</p>
-          <h2 className="text-4xl lg:text-5xl font-bold text-gradient mb-4">
-            Popular Services
-          </h2>
-          <p className="text-gray-500 max-w-2xl mx-auto">
-            From classic manicures to intricate nail art, we offer a wide range of services to make you look and feel your best.
-          </p>
-        </motion.div>
+  const [openIndex, setOpenIndex] = useState(null);
+  const toggle = (i) => setOpenIndex(openIndex === i ? null : i);
+  const handleBook = (name) => { if (typeof window !== "undefined") localStorage.setItem("selectedService", name); };
 
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {salonData.categories.popular.map((service) => {
-            const Icon = iconMap[service.name] || Sparkles;
+  return (
+    <section id="services" className="section-padding bg-gradient-to-b from-white to-pink-50/30">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
+          <p className="text-pink-500 font-semibold mb-3">Our Services</p>
+          <h2 className="text-4xl lg:text-5xl font-bold text-gradient">Premium Nail Care</h2>
+          <p className="text-gray-500 mt-4 max-w-lg mx-auto">Explore our full range of professional nail and beauty services</p>
+        </motion.div>
+        <div className="space-y-3">
+          {categories.map((cat, i) => {
+            const Icon = cat.icon;
+            const isOpen = openIndex === i;
             return (
-              <motion.div
-                key={service.name}
-                variants={item}
-                className="card-hover group bg-white rounded-2xl p-6 border border-pink-100/80 shadow-sm"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center text-pink-600 mb-5 group-hover:scale-110 transition-transform">
-                  <Icon size={26} />
-                </div>
-                <h3 className="font-bold text-lg text-gray-900 mb-2">{service.name}</h3>
-                <p className="text-sm text-gray-500 mb-4">
-                  Professional {service.name.toLowerCase()} with premium products and expert care.
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-gradient">{service.price}</span>
-                    <span className="flex items-center gap-1 text-sm text-gray-400">
-                      <Clock size={14} />
-                      {service.duration}
-                    </span>
+              <div key={cat.key} className="bg-white rounded-2xl border border-pink-100/60 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <button onClick={() => toggle(i)} className="w-full flex items-center justify-between p-5 text-left">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradients[i]} flex items-center justify-center text-white shadow-sm`}><Icon size={20} /></div>
+                    <div><p className="font-bold text-gray-900 text-lg">{cat.label}</p><p className="text-sm text-gray-400">{cat.services.length} service{cat.services.length !== 1 ? "s" : ""}</p></div>
                   </div>
-                </div>
-                <Link
-                  href="/booking"
-                  className="mt-4 btn-primary w-full text-sm py-2.5 group/btn"
-                >
-                  Book Now
-                  <ArrowRight size={16} className="ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                </Link>
-              </motion.div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-400 font-medium">From {cat.services[0]?.price || "£0.00"}</span>
+                    <div className={`w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center text-pink-500 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}><ChevronDown size={18} /></div>
+                  </div>
+                </button>
+                <AnimatePresence>
+                  {isOpen && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="overflow-hidden">
+                      <div className="border-t border-pink-50 px-5 pb-5 pt-2 space-y-2">
+                        {cat.services.map((service, si) => (
+                          <div key={si} className="flex items-center gap-4 p-3 rounded-xl hover:bg-pink-50/50 transition-colors group">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center text-pink-400 font-bold text-lg shrink-0">{service.name.charAt(0)}</div>
+                            <div className="flex-1 min-w-0"><p className="font-semibold text-gray-900 text-sm truncate">{service.name}</p><div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5"><Clock size={12} /><span>{service.duration}</span></div></div>
+                            <p className="font-bold text-pink-600 text-sm shrink-0">{service.price}</p>
+                            <Link href="/booking" onClick={() => handleBook(service.name)} className="shrink-0 inline-flex items-center gap-1 px-4 py-2 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-pink-200/50 transition-all hover:-translate-y-0.5">Book <ArrowRight size={14} /></Link>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             );
           })}
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="text-center mt-12"
-        >
-          <Link href="/services-page" className="btn-secondary">
-            View All Services
-            <ArrowRight size={18} className="ml-2" />
-          </Link>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

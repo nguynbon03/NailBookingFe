@@ -67,6 +67,13 @@ body {
   box-shadow: 0 12px 24px -8px rgba(225, 29, 72, 0.45);
 }
 
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .btn-secondary {
   display: inline-flex;
   align-items: center;
@@ -134,6 +141,15 @@ body {
   animation-delay: 3s;
 }
 
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.33%); }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -141,4 +157,13 @@ body {
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@keyframes marquee-2 {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee-2 {
+  animation: marquee-2 40s linear infinite;
 }
