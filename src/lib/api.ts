@@ -1,4 +1,4 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api.overpowers.agency";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://bookingnail.overpowers.agency";
 
 export async function fetchAPI(path: string, options: RequestInit = {}) {
   const url = `${API_BASE}${path}`;
