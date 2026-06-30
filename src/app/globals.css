@@ -167,3 +167,11 @@ body {
 .animate-marquee-2 {
   animation: marquee-2 40s linear infinite;
 }
+
+@keyframes marquee-slow {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.33%); }
+}
+.animate-marquee-slow {
+  animation: marquee-slow 60s linear infinite;
+}
