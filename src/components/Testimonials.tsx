@@ -29,12 +29,12 @@ export default function Testimonials() {
         </motion.div>
 
         {/* Slow marquee */}
-        <div className="relative">
-          <div className="flex gap-5 animate-marquee-slow hover:[animation-play-state:paused]">
+        <div className="relative overflow-hidden">
+          <div className="flex gap-5 animate-marquee-slow hover:[animation-play-state:paused] w-max">
             {all.map((t, i) => (
               <div
                 key={`${t.name}-${i}`}
-                className="shrink-0 w-[300px] sm:w-[340px] lg:w-[380px] bg-white rounded-2xl p-6 shadow-lg shadow-pink-100/30 border border-pink-100/60 flex flex-col"
+                className="shrink-0 w-[280px] sm:w-[300px] md:w-[340px] lg:w-[380px] bg-white rounded-2xl p-6 shadow-lg shadow-pink-100/30 border border-pink-100/60 flex flex-col"
               >
                 <Quote size={24} className="text-pink-300 mb-3" />
                 <p className="text-gray-600 text-sm leading-relaxed mb-4 italic flex-1">
