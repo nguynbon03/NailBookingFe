@@ -27,17 +27,9 @@ export default function AdminStaff() {
 
   const save = async () => {
     if (editing) {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.bookingnail.overpowers.agency"}/api/admin/staff`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-        body: JSON.stringify({ id: editing.id, ...form }),
-      });
+      await api.admin.updateStaff({ id: editing.id, ...form });
     } else {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.bookingnail.overpowers.agency"}/api/admin/staff`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-        body: JSON.stringify(form),
-      });
+      await api.admin.createStaff(form);
     }
     setShowForm(false);
     setEditing(null);
@@ -47,11 +39,7 @@ export default function AdminStaff() {
 
   const remove = async (id: string) => {
     if (!confirm("Delete this staff member?")) return;
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.bookingnail.overpowers.agency"}/api/admin/staff`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-      body: JSON.stringify({ id }),
-    });
+    await api.admin.deleteStaff(id);
     refresh();
   };
 

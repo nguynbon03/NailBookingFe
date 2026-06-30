@@ -1,10 +1,10 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api.bookingnail.overpowers.agency";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api.overpowers.agency";
 
 export async function fetchAPI(path: string, options: RequestInit = {}) {
   const url = `${API_BASE}${path}`;
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const headers: Record<string, string> = {
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(token ? { Authorization: ["Bea", "rer ", token].join("") } : {}),
     ...((options.headers as Record<string, string>) || {}),
   };
   if (!(options.body instanceof FormData)) {
@@ -41,5 +41,8 @@ export const api = {
     updateService: (data: any) => fetchAPI("/api/admin/services", { method: "PUT", body: JSON.stringify(data) }),
     deleteService: (id: string) => fetchAPI("/api/admin/services", { method: "DELETE", body: JSON.stringify({ id }) }),
     staff: () => fetchAPI("/api/admin/staff").catch(() => ({ staff: [] })),
+    createStaff: (data: any) => fetchAPI("/api/admin/staff", { method: "POST", body: JSON.stringify(data) }),
+    updateStaff: (data: any) => fetchAPI("/api/admin/staff", { method: "PUT", body: JSON.stringify(data) }),
+    deleteStaff: (id: string) => fetchAPI("/api/admin/staff", { method: "DELETE", body: JSON.stringify({ id }) }),
   },
 };

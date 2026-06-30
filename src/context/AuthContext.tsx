@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { api } from "@/lib/api";
 
 interface User { id: string; email: string; name: string; role: string; }
 interface AuthCtx { user: User | null; login: (email: string, password: string) => Promise<void>; register: (data: any) => Promise<void>; logout: () => void; loading: boolean; }
@@ -14,23 +15,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.json()).then(d => { if (d.user) setUser(d.user); }).finally(() => setLoading(false));
-    } else setLoading(false);
+      api.auth.me()
+        .then((d: any) => { if (d.user) setUser(d.user); })
+        .catch(() => { localStorage.removeItem("token"); setUser(null); })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const login = async (email: string, password: string) => {
-    const r = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error);
+    const d = await api.auth.login(email, password);
     localStorage.setItem("token", d.token);
     setUser(d.user);
   };
 
   const register = async (data: any) => {
-    const r = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error);
+    await api.auth.register(data);
   };
 
   const logout = () => { localStorage.removeItem("token"); setUser(null); window.location.href = "/"; };
