@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
-import { CalendarDays, CheckCircle, Clock, ClipboardList, LogOut, Bell, Plus, Trash, UserCheck } from "lucide-react";
+import { CalendarDays, CheckCircle, Clock, ClipboardList, LogOut, Bell, Plus, Trash, UserCheck, AlertTriangle, XCircle } from "lucide-react";
 import { formatPrice } from "@/lib/service-utils";
 
 type Booking = {
@@ -19,6 +19,10 @@ type Booking = {
   totalPrice: number;
   promoCode?: string | null;
   discount?: number | null;
+  paymentConfirmedAt?: string | null;
+  paymentConfirmedBy?: string | null;
+  staffRejectionReason?: string | null;
+  staffRejectedAt?: string | null;
   staff?: { name: string } | null;
   services?: { service: { name: string; price: number; duration: number; image?: string | null } }[];
 };
@@ -27,7 +31,7 @@ type Notification = { id: string; title: string; message: string; read: boolean;
 type Availability = { id: string; dayOfWeek: number | null; date: string | null; startTime: string; endTime: string; active: boolean };
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const cancellationReasonHint = "Shop have Problem / Staff have problem / Shop is too busy / No Reason / Other";
+const rejectReasons = ["Staff have problem", "Time not available", "Service skill mismatch", "Too busy", "Other"];
 const emptyAvailability = { dayOfWeek: "1", date: "", startTime: "09:00", endTime: "18:00", active: true };
 
 function bookingServices(booking: Booking) {
@@ -59,6 +63,9 @@ export default function StaffPortalPage() {
   const [form, setForm] = useState(emptyAvailability);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [rejectTarget, setRejectTarget] = useState<Booking | null>(null);
+  const [rejectReason, setRejectReason] = useState(rejectReasons[0]);
+  const [rejectOther, setRejectOther] = useState("");
 
   const allowed = user && ["STAFF", "ADMIN", "MANAGER"].includes(user.role);
 
@@ -92,19 +99,30 @@ export default function StaffPortalPage() {
     refresh();
   }, [authLoading, user?.id]);
 
-  const runAction = async (id: string, action: string, cancellationReason?: string | null) => {
+  const runAction = async (id: string, action: string, reason?: string | null) => {
     try {
-      await api.staff.action(id, action, cancellationReason);
+      await api.staff.action(id, action, reason);
       refresh();
     } catch (err: any) {
       setError(err.message || "Action failed");
     }
   };
 
-  const runCancelAction = (id: string) => {
-    const reason = window.prompt(`Reason for cancelling (${cancellationReasonHint})`, "Staff have problem");
-    if (reason === null) return;
-    runAction(id, "cancel", reason.trim() || "Staff have problem");
+  const openReject = (booking: Booking) => {
+    setRejectTarget(booking);
+    setRejectReason(rejectReasons[0]);
+    setRejectOther("");
+  };
+
+  const submitReject = async () => {
+    if (!rejectTarget) return;
+    const reason = rejectReason === "Other" ? rejectOther.trim() : rejectReason;
+    if (!reason) {
+      setError("Please enter a reason before rejecting the job");
+      return;
+    }
+    await runAction(rejectTarget.id, "reject", reason);
+    setRejectTarget(null);
   };
 
   const saveAvailability = async () => {
@@ -141,15 +159,19 @@ export default function StaffPortalPage() {
             <div className="min-w-0">
               <p className="text-pink-500 font-black text-xs sm:text-sm uppercase tracking-wide mb-1">Staff Portal</p>
               <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">Jobs & Schedule</h1>
-              <p className="hidden sm:block text-gray-500 mt-2">Claim available bookings, confirm work, and keep the shop owner notified.</p>
+              <p className="hidden sm:block text-gray-500 mt-2">Staff only accepts internal jobs. Owner/Manager handles customer confirmation, payment and cancellation.</p>
             </div>
             <button onClick={logout} className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold inline-flex items-center gap-1.5 shrink-0"><LogOut size={15} />Logout</button>
+          </div>
+
+          <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
+            <b>Workflow rule:</b> jobs shown here are already payment-confirmed by Owner/Manager. Pressing <b>Accept job</b> only assigns the staff member; it does not send a new confirmation to the customer. If you cannot take a job, use <b>Cannot take job</b> and enter a reason so Manager can reassign it.
           </div>
 
           {error && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>}
 
           <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-8">
-            <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><ClipboardList className="text-pink-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{availableBookings.length}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Open</p></div>
+            <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><ClipboardList className="text-pink-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{availableBookings.length}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Open paid jobs</p></div>
             <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><CalendarDays className="text-emerald-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{myBookings.length}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Mine</p></div>
             <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><Bell className="text-amber-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{notifications.filter((n) => !n.read).length}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Unread</p></div>
           </div>
@@ -158,18 +180,19 @@ export default function StaffPortalPage() {
             <div className="space-y-4 sm:space-y-6 min-w-0">
               <section className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-pink-100 shadow-sm">
                 <div className="flex items-center justify-between mb-4 sm:mb-5">
-                  <h2 className="text-lg sm:text-xl font-black text-gray-900">Available Jobs</h2>
+                  <h2 className="text-lg sm:text-xl font-black text-gray-900">Open Paid Jobs</h2>
                   <button onClick={refresh} className="h-10 px-3 rounded-xl bg-pink-50 text-pink-600 text-xs sm:text-sm font-bold">Refresh</button>
                 </div>
-                {availableBookings.length === 0 ? <p className="text-sm text-gray-400">No open jobs right now.</p> : <div className="space-y-2.5 sm:space-y-3">
+                {availableBookings.length === 0 ? <p className="text-sm text-gray-400">No open paid jobs right now.</p> : <div className="space-y-2.5 sm:space-y-3">
                   {availableBookings.map((booking) => (
                     <div key={booking.id} className="rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
                       <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1.5"><span className="font-black text-gray-900 truncate">{booking.customerName}</span><span className={statusClass(booking.status)}>{booking.status}</span></div>
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5"><span className="font-black text-gray-900 truncate">{booking.customerName}</span><span className={statusClass(booking.status)}>Paid / Confirmed</span></div>
                         <p className="text-sm text-gray-600 truncate">{bookingServices(booking)}</p>
                         <p className="text-xs text-gray-400 mt-1"><Clock size={12} className="inline mr-1" />{shortDate(booking.date)} {booking.time} · {formatPrice(booking.totalPrice)}</p>
+                        {booking.paymentConfirmedAt && <p className="text-[11px] text-emerald-600 font-bold mt-1">Payment confirmed by {booking.paymentConfirmedBy || "Manager"}</p>}
                       </div>
-                      <button onClick={() => runAction(booking.id, "claim")} className="btn-primary w-full lg:w-auto min-h-11 inline-flex items-center justify-center gap-2"><UserCheck size={16} />Claim & Confirm</button>
+                      <button onClick={() => runAction(booking.id, "claim")} className="btn-primary w-full lg:w-auto min-h-11 inline-flex items-center justify-center gap-2"><UserCheck size={16} />Accept job</button>
                     </div>
                   ))}
                 </div>}
@@ -182,15 +205,14 @@ export default function StaffPortalPage() {
                     <div key={booking.id} className="rounded-2xl border border-gray-100 p-3 sm:p-4">
                       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1.5"><span className="font-black text-gray-900 truncate">{booking.customerName}</span><span className={statusClass(booking.status)}>{booking.status}</span></div>
+                          <div className="flex flex-wrap items-center gap-2 mb-1.5"><span className="font-black text-gray-900 truncate">{booking.customerName}</span><span className={statusClass(booking.status)}>Assigned</span></div>
                           <p className="text-sm text-gray-600 truncate">{bookingServices(booking)}</p>
                           <p className="text-xs text-gray-400 mt-1"><Clock size={12} className="inline mr-1" />{shortDate(booking.date)} {booking.time} · {formatPrice(booking.totalPrice)}</p>
                           <p className="text-xs text-gray-400 mt-1 truncate">Phone: {booking.customerPhone}</p>
                         </div>
                         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
-                          {booking.status === "PENDING" && <button onClick={() => runAction(booking.id, "confirm")} className="btn-primary min-h-11 text-sm">Confirm</button>}
-                          {booking.status === "CONFIRMED" && <button onClick={() => runAction(booking.id, "complete")} className="btn-primary min-h-11 text-sm"><CheckCircle size={14} className="inline mr-1" />Complete</button>}
-                          <button onClick={() => runCancelAction(booking.id)} className="btn-secondary min-h-11 text-sm">Cancel</button>
+                          <button onClick={() => runAction(booking.id, "complete")} className="btn-primary min-h-11 text-sm"><CheckCircle size={14} className="inline mr-1" />Complete</button>
+                          <button onClick={() => openReject(booking)} className="btn-secondary min-h-11 text-sm"><XCircle size={14} className="inline mr-1" />Cannot take job</button>
                           <button onClick={() => runAction(booking.id, "no_show")} className="btn-secondary min-h-11 text-sm">No-show</button>
                         </div>
                       </div>
@@ -240,6 +262,28 @@ export default function StaffPortalPage() {
           </div>
         </div>
       </main>
+      {rejectTarget && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-3">
+          <div className="bg-white rounded-3xl p-5 w-full max-w-md shadow-2xl">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-11 h-11 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0"><AlertTriangle size={22} /></div>
+              <div>
+                <h3 className="text-lg font-black text-gray-900">Cannot take this job?</h3>
+                <p className="text-sm text-gray-500 mt-1">This will not cancel the customer booking. It returns the job to Owner/Manager for reassignment and records your reason.</p>
+              </div>
+            </div>
+            <p className="text-sm font-bold text-gray-700 mb-2">Reason</p>
+            <select value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="w-full min-h-12 rounded-2xl border border-gray-200 px-4 mb-3 bg-white">
+              {rejectReasons.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+            {rejectReason === "Other" && <textarea value={rejectOther} onChange={(e) => setRejectOther(e.target.value)} className="w-full min-h-24 rounded-2xl border border-gray-200 px-4 py-3 mb-3" placeholder="Enter reason" />}
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setRejectTarget(null)} className="btn-secondary min-h-11">Back</button>
+              <button onClick={submitReject} className="min-h-11 rounded-xl bg-orange-600 text-white font-bold">Submit reason</button>
+            </div>
+          </div>
+        </div>
+      )}
       <Footer />
     </>
   );

@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
-import { CalendarDays, Phone, Mail, Tag, RefreshCw, UserRound, Scissors, PoundSterling } from "lucide-react";
+import { CalendarDays, Phone, Mail, Tag, RefreshCw, UserRound, Scissors, PoundSterling, Archive, CheckCircle2, CreditCard, AlertTriangle } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { formatPrice } from "@/lib/service-utils";
@@ -22,6 +22,12 @@ type Booking = {
   emailVerifiedAt?: string | null;
   emailVerificationSentAt?: string | null;
   emailVerificationExpiresAt?: string | null;
+  paymentConfirmedAt?: string | null;
+  paymentConfirmedBy?: string | null;
+  staffRejectedAt?: string | null;
+  staffRejectionReason?: string | null;
+  staffRejectionBy?: string | null;
+  archivedAt?: string | null;
   status: string;
   staff?: { name: string } | null;
   user?: { name: string; email: string; role: string } | null;
@@ -29,15 +35,21 @@ type Booking = {
 };
 
 const statuses = ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"];
-const cancellationReasons = ["Shop have Problem", "Staff have problem", "Shop is too busy", "No Reason", "Other"];
+const cancellationReasons = ["Shop have Problem", "Staff have problem", "Shop is too busy", "Customer asked to cancel", "No Reason", "Other"];
 const defaultCancellationReason = "No Reason";
 const statusLabels: Record<string, string> = {
-  PENDING: "Awaiting payment",
-  CONFIRMED: "Confirmed",
+  PENDING: "Awaiting transfer",
+  CONFIRMED: "Paid / Confirmed",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
   NO_SHOW: "No show",
 };
+
+function todayISO() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+}
 
 function bookingReference(id: string) {
   return `NL-${id.slice(-8).toUpperCase()}`;
@@ -52,30 +64,70 @@ function shortDate(value: string) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
 }
 
+function workflowStage(b: Booking) {
+  if (b.archivedAt) return { label: "Archived", tone: "bg-gray-100 text-gray-600" };
+  if (b.status === "CANCELLED") return { label: "Cancelled with reason", tone: "bg-red-100 text-red-700" };
+  if (b.status === "COMPLETED") return { label: "Done / revenue kept", tone: "bg-blue-100 text-blue-700" };
+  if (b.status === "NO_SHOW") return { label: "No-show / paid revenue kept", tone: "bg-gray-100 text-gray-700" };
+  if (!b.emailVerifiedAt) return { label: "1. Email pending", tone: "bg-amber-100 text-amber-700" };
+  if (b.status === "PENDING") return { label: "2. Awaiting bank transfer", tone: "bg-orange-100 text-orange-700" };
+  if (b.status === "CONFIRMED" && !b.staff) return { label: "3. Paid - assign staff", tone: "bg-emerald-100 text-emerald-700" };
+  if (b.status === "CONFIRMED" && b.staff) return { label: "4. Staff assigned", tone: "bg-emerald-100 text-emerald-700" };
+  return { label: b.status, tone: "bg-gray-100 text-gray-700" };
+}
+
+function dateTimeText(value?: string | null) {
+  if (!value) return "";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleString();
+}
+
 export default function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState(todayISO());
+  const [includeArchived, setIncludeArchived] = useState(false);
   const [error, setError] = useState("");
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  const [cancelReason, setCancelReason] = useState(defaultCancellationReason);
+  const [cancelOther, setCancelOther] = useState("");
 
   const refresh = () => {
     setError("");
-    api.admin.bookings()
+    setLoading(true);
+    api.admin.bookings({ date: dateFilter || undefined, includeArchived })
       .then((d: any) => setBookings(d.bookings || []))
       .catch((err: any) => setError(err.message || "Failed to load bookings"))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { refresh(); }, [dateFilter, includeArchived]);
+
+  const askCancelReason = (booking: Booking) => {
+    setCancelTarget(booking);
+    setCancelReason(defaultCancellationReason);
+    setCancelOther("");
+  };
 
   const updateStatus = async (id: string, status: string, cancellationReason?: string | null) => {
-    const old = bookings;
-    let reason = status === "CANCELLED" ? (cancellationReason || defaultCancellationReason) : null;
+    const target = bookings.find((b) => b.id === id);
+    if (!target) return;
     if (status === "CANCELLED" && !cancellationReason) {
-      const entered = window.prompt(`Reason for cancelling (${cancellationReasons.join(" / ")})`, defaultCancellationReason);
-      if (entered === null) return;
-      reason = entered.trim() || defaultCancellationReason;
+      askCancelReason(target);
+      return;
     }
+    if (status === "CONFIRMED" && !target.emailVerifiedAt) {
+      setError("Cannot confirm payment before customer email verification.");
+      return;
+    }
+    if (status === "CONFIRMED" && target.status !== "CONFIRMED") {
+      const ok = window.confirm("Only confirm after bank transfer/payment is actually received. This will count revenue and release the job to Staff Portal. Continue?");
+      if (!ok) return;
+    }
+
+    const old = bookings;
+    const reason = status === "CANCELLED" ? (cancellationReason || defaultCancellationReason) : null;
     setBookings((items) => items.map((b) => b.id === id ? { ...b, status, cancellationReason: reason } : b));
     try {
       const result = await api.admin.updateBookingStatus(id, status, undefined, reason);
@@ -85,6 +137,27 @@ export default function AdminBookings() {
     } catch (err: any) {
       setBookings(old);
       setError(err.message || "Failed to update booking status");
+    }
+  };
+
+  const submitCancel = async () => {
+    if (!cancelTarget) return;
+    const reason = cancelReason === "Other" ? cancelOther.trim() : cancelReason;
+    if (!reason) {
+      setError("Please enter a cancellation reason");
+      return;
+    }
+    await updateStatus(cancelTarget.id, "CANCELLED", reason);
+    setCancelTarget(null);
+  };
+
+  const archiveBooking = async (id: string) => {
+    if (!window.confirm("Archive this booking from the active list? It will not be permanently deleted.")) return;
+    try {
+      await api.admin.archiveBooking(id);
+      setBookings((items) => items.filter((b) => b.id !== id));
+    } catch (err: any) {
+      setError(err.message || "Failed to archive booking");
     }
   };
 
@@ -100,6 +173,19 @@ export default function AdminBookings() {
     return cn("px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wide whitespace-nowrap", map[status] || "bg-gray-100 text-gray-600");
   };
 
+  const stats = useMemo(() => {
+    const active = bookings.filter((b) => !b.archivedAt);
+    const paid = active.filter((b) => ["CONFIRMED", "COMPLETED", "NO_SHOW"].includes(b.status));
+    return {
+      total: active.length,
+      emailPending: active.filter((b) => !b.emailVerifiedAt).length,
+      awaitingTransfer: active.filter((b) => b.emailVerifiedAt && b.status === "PENDING").length,
+      paidCount: paid.length,
+      revenue: paid.reduce((sum, b) => sum + Number(b.totalPrice || 0), 0),
+      cancelled: active.filter((b) => b.status === "CANCELLED").length,
+    };
+  }, [bookings]);
+
   const filterItems = ["all", ...statuses];
 
   return (
@@ -108,11 +194,46 @@ export default function AdminBookings() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Bookings</h2>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1">Compact shop view — more bookings visible on desktop, thumb-friendly cards on phone.</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">Daily workflow: email verified → bank transfer checked → payment confirmed → staff accepts job → complete/no-show.</p>
           </div>
           <button onClick={refresh} className="h-10 w-10 sm:w-auto sm:px-3 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-pink-600 hover:border-pink-200 inline-flex items-center justify-center gap-2 shrink-0">
             <RefreshCw size={16} /><span className="hidden sm:inline text-sm font-semibold">Refresh</span>
           </button>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-3 items-start rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+          <div>
+            <h3 className="font-black text-emerald-900 flex items-center gap-2"><CheckCircle2 size={18} /> Payment-safe workflow</h3>
+            <ol className="mt-2 grid grid-cols-1 md:grid-cols-5 gap-2 text-xs text-emerald-800">
+              <li><b>1.</b> Customer registers + verifies account email.</li>
+              <li><b>2.</b> Booking request waits for booking-email verification.</li>
+              <li><b>3.</b> Owner/Manager checks bank transfer manually.</li>
+              <li><b>4.</b> Click <b>Payment received</b>; revenue is counted and Staff can accept.</li>
+              <li><b>5.</b> Staff only accepts/rejects internal job. Customer cancellation is Owner/Manager only.</li>
+            </ol>
+          </div>
+          <div className="text-xs text-emerald-900 bg-white/70 rounded-2xl p-3 min-w-[210px]"><CreditCard size={16} className="inline mr-1" /> Confirm only after money is actually received to avoid lost revenue.</div>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
+          <div className="rounded-2xl bg-white border border-gray-100 p-3"><p className="text-[11px] text-gray-400 font-black uppercase">Active</p><p className="text-2xl font-black">{stats.total}</p></div>
+          <div className="rounded-2xl bg-white border border-amber-100 p-3"><p className="text-[11px] text-amber-500 font-black uppercase">Email pending</p><p className="text-2xl font-black">{stats.emailPending}</p></div>
+          <div className="rounded-2xl bg-white border border-orange-100 p-3"><p className="text-[11px] text-orange-500 font-black uppercase">Awaiting transfer</p><p className="text-2xl font-black">{stats.awaitingTransfer}</p></div>
+          <div className="rounded-2xl bg-white border border-emerald-100 p-3"><p className="text-[11px] text-emerald-500 font-black uppercase">Paid jobs</p><p className="text-2xl font-black">{stats.paidCount}</p></div>
+          <div className="rounded-2xl bg-white border border-pink-100 p-3"><p className="text-[11px] text-pink-500 font-black uppercase">Paid revenue</p><p className="text-2xl font-black">{formatPrice(stats.revenue)}</p></div>
+          <div className="rounded-2xl bg-white border border-red-100 p-3"><p className="text-[11px] text-red-500 font-black uppercase">Cancelled</p><p className="text-2xl font-black">{stats.cancelled}</p></div>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-2 md:items-center">
+          <label className="flex items-center gap-2 rounded-xl bg-white border border-gray-200 px-3 py-2 text-sm font-bold text-gray-600">
+            <CalendarDays size={16} />
+            <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="outline-none bg-transparent" />
+          </label>
+          <button onClick={() => setDateFilter(todayISO())} className="px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-600">Today</button>
+          <button onClick={() => setDateFilter("")} className="px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-600">All days</button>
+          <label className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-600">
+            <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} /> Include archived
+          </label>
         </div>
 
         <div className="-mx-3 sm:mx-0 overflow-x-auto pb-1 px-3 sm:px-0">
@@ -133,11 +254,11 @@ export default function AdminBookings() {
       {loading ? (
         <div className="text-center py-12 text-gray-400">Loading bookings...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">No bookings found.</div>
+        <div className="text-center py-12 text-gray-400">No bookings found for this filter.</div>
       ) : (
         <>
           <div className="hidden lg:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="max-h-[calc(100vh-210px)] overflow-auto">
+            <div className="max-h-[calc(100vh-250px)] overflow-auto">
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur border-b border-gray-100 text-[11px] uppercase tracking-wide text-gray-400">
                   <tr>
@@ -146,73 +267,69 @@ export default function AdminBookings() {
                     <th className="px-3 py-2 font-black">Service</th>
                     <th className="px-3 py-2 font-black">Staff</th>
                     <th className="px-3 py-2 font-black text-right">Revenue</th>
-                    <th className="px-3 py-2 font-black">Status</th>
-                    <th className="px-3 py-2 font-black w-52">Update</th>
+                    <th className="px-3 py-2 font-black">Step</th>
+                    <th className="px-3 py-2 font-black">Reason / Audit</th>
+                    <th className="px-3 py-2 font-black w-56">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filtered.map((b) => (
-                    <tr key={b.id} className="hover:bg-pink-50/30 align-middle">
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <div className="font-black text-gray-900 leading-tight">{shortDate(b.date)}</div>
-                        <div className="text-xs text-pink-600 font-bold">{b.time}</div>
-                      </td>
-                      <td className="px-3 py-2 min-w-[190px] max-w-[240px]">
-                        <div className="font-bold text-gray-900 truncate">{b.customerName}</div>
-                        <div className="text-[11px] text-gray-400 truncate">{b.customerPhone} · {b.customerEmail || b.user?.email || "No email"}</div>
-                        <div className="text-[11px] text-orange-600 font-bold truncate">Ref: {bookingReference(b.id)}{b.status === "PENDING" ? (b.emailVerifiedAt ? " · Email verified" : " · Awaiting email verification") : ""}</div>
-                      </td>
-                      <td className="px-3 py-2 max-w-[260px]">
-                        <div className="text-gray-700 truncate font-medium">{serviceSummary(b)}</div>
-                        {b.discount ? <div className="text-[11px] text-emerald-600 truncate">-{formatPrice(b.discount)} {b.promoCode ? `(${b.promoCode})` : ""}</div> : null}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-gray-600">{b.staff?.name || "Any"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-right font-black text-pink-600">{formatPrice(b.totalPrice)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap"><span className={statusBadge(b.status)}>{statusLabels[b.status] || b.status}</span></td>
-                      <td className="px-3 py-2">
-                        <select value={b.status} onChange={(e) => updateStatus(b.id, e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold focus:ring-2 focus:ring-pink-300 outline-none bg-white">
-                          {statuses.map((status) => <option key={status} value={status} disabled={status === "CONFIRMED" && !b.emailVerifiedAt}>{statusLabels[status]}{status === "CONFIRMED" && !b.emailVerifiedAt ? " (verify email first)" : ""}</option>)}
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
+                  {filtered.map((b) => {
+                    const step = workflowStage(b);
+                    return (
+                      <tr key={b.id} className="hover:bg-pink-50/30 align-middle">
+                        <td className="px-3 py-2 whitespace-nowrap"><div className="font-black text-gray-900 leading-tight">{shortDate(b.date)}</div><div className="text-xs text-pink-600 font-bold">{b.time}</div></td>
+                        <td className="px-3 py-2 min-w-[190px] max-w-[250px]"><div className="font-bold text-gray-900 truncate">{b.customerName}</div><div className="text-[11px] text-gray-400 truncate">{b.customerPhone} · {b.customerEmail || b.user?.email || "No email"}</div><div className="text-[11px] text-orange-600 font-bold truncate">Ref: {bookingReference(b.id)}</div></td>
+                        <td className="px-3 py-2 max-w-[250px]"><div className="text-gray-700 truncate font-medium">{serviceSummary(b)}</div>{b.discount ? <div className="text-[11px] text-emerald-600 truncate">-{formatPrice(b.discount)} {b.promoCode ? `(${b.promoCode})` : ""}</div> : null}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-gray-600">{b.staff?.name || "Any"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-right font-black text-pink-600">{formatPrice(b.totalPrice)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap"><span className={cn("px-2 py-0.5 rounded-full text-[10px] font-black", step.tone)}>{step.label}</span></td>
+                        <td className="px-3 py-2 max-w-[260px] text-xs text-gray-500"><div className="line-clamp-3">{b.cancellationReason ? `Cancel: ${b.cancellationReason}` : b.staffRejectionReason ? `Staff rejected: ${b.staffRejectionReason}` : b.paymentConfirmedAt ? `Paid: ${dateTimeText(b.paymentConfirmedAt)} by ${b.paymentConfirmedBy || "Manager"}` : b.emailVerifiedAt ? "Email verified. Wait for transfer." : "Waiting customer email verification."}</div></td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <select value={b.status} onChange={(e) => updateStatus(b.id, e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold focus:ring-2 focus:ring-pink-300 outline-none bg-white">
+                              {statuses.map((status) => <option key={status} value={status} disabled={status === "CONFIRMED" && !b.emailVerifiedAt}>{status === "CONFIRMED" ? "Payment received → Confirm" : statusLabels[status]}{status === "CONFIRMED" && !b.emailVerifiedAt ? " (verify email first)" : ""}</option>)}
+                            </select>
+                            <button onClick={() => archiveBooking(b.id)} className="h-8 w-8 rounded-lg bg-gray-50 text-gray-500 hover:bg-gray-100 inline-flex items-center justify-center" title="Archive"><Archive size={14} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
 
           <div className="lg:hidden space-y-2.5">
-            {filtered.map((b) => (
-              <div key={b.id} className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-black text-gray-900 truncate">{b.customerName}</span>
-                      <span className={statusBadge(b.status)}>{statusLabels[b.status] || b.status}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
-                      <span className="inline-flex items-center gap-1"><CalendarDays size={11} />{shortDate(b.date)} {b.time}</span>
-                      <span className="inline-flex items-center gap-1"><PoundSterling size={11} />{formatPrice(b.totalPrice)}</span>
-                    </div>
+            {filtered.map((b) => {
+              const step = workflowStage(b);
+              return (
+                <div key={b.id} className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0"><div className="flex items-center gap-2 mb-1"><span className="font-black text-gray-900 truncate">{b.customerName}</span><span className={statusBadge(b.status)}>{statusLabels[b.status] || b.status}</span></div><div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400"><span className="inline-flex items-center gap-1"><CalendarDays size={11} />{shortDate(b.date)} {b.time}</span><span className="inline-flex items-center gap-1"><PoundSterling size={11} />{formatPrice(b.totalPrice)}</span></div></div>
+                    <button onClick={() => archiveBooking(b.id)} className="h-9 w-9 rounded-xl bg-gray-50 text-gray-500 inline-flex items-center justify-center"><Archive size={14} /></button>
                   </div>
-                  <select value={b.status} onChange={(e) => updateStatus(b.id, e.target.value)} className="px-2 py-2 rounded-xl border border-gray-200 text-xs font-bold bg-white shrink-0 max-w-[150px]">
-                    {statuses.map((status) => <option key={status} value={status} disabled={status === "CONFIRMED" && !b.emailVerifiedAt}>{statusLabels[status]}{status === "CONFIRMED" && !b.emailVerifiedAt ? " (verify email first)" : ""}</option>)}
-                  </select>
+                  <div className="mt-2"><span className={cn("px-2 py-1 rounded-full text-[11px] font-black", step.tone)}>{step.label}</span></div>
+                  <div className="mt-2 grid grid-cols-1 gap-1.5 text-xs text-gray-600"><p className="flex items-center gap-1 min-w-0"><Scissors size={12} className="text-pink-500 shrink-0" /><span className="truncate">{serviceSummary(b)}</span></p><p className="flex items-center gap-1 min-w-0"><UserRound size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.staff?.name || "Any Staff"}</span></p><p className="flex items-center gap-1 min-w-0"><Phone size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.customerPhone}</span></p><p className="flex items-center gap-1 min-w-0"><Mail size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.customerEmail || b.user?.email || "No email"}</span></p><p className="text-orange-600 font-bold">Ref: {bookingReference(b.id)}</p>{b.cancellationReason && <p className="text-red-600">Cancel reason: {b.cancellationReason}</p>}{b.staffRejectionReason && <p className="text-orange-600">Staff reject reason: {b.staffRejectionReason}</p>}</div>
+                  <select value={b.status} onChange={(e) => updateStatus(b.id, e.target.value)} className="mt-3 w-full px-3 py-3 rounded-xl border border-gray-200 text-xs font-bold bg-white"><option value={b.status}>{statusLabels[b.status] || b.status}</option>{statuses.filter((s) => s !== b.status).map((status) => <option key={status} value={status} disabled={status === "CONFIRMED" && !b.emailVerifiedAt}>{status === "CONFIRMED" ? "Payment received → Confirm" : statusLabels[status]}</option>)}</select>
+                  {b.discount ? <div className="mt-2 flex items-center gap-1 text-emerald-600 text-xs"><Tag size={13} />Discount: -{formatPrice(b.discount)} {b.promoCode ? `(${b.promoCode})` : ""}</div> : null}
                 </div>
-
-                <div className="mt-2 grid grid-cols-1 gap-1.5 text-xs text-gray-600">
-                  <p className="flex items-center gap-1 min-w-0"><Scissors size={12} className="text-pink-500 shrink-0" /><span className="truncate">{serviceSummary(b)}</span></p>
-                  <p className="flex items-center gap-1 min-w-0"><UserRound size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.staff?.name || "Any Staff"}</span></p>
-                  <p className="flex items-center gap-1 min-w-0"><Phone size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.customerPhone}</span></p>
-                  <p className="flex items-center gap-1 min-w-0"><Mail size={12} className="text-pink-500 shrink-0" /><span className="truncate">{b.customerEmail || b.user?.email || "No email"}</span></p>
-                  <p className="text-orange-600 font-bold">Ref: {bookingReference(b.id)}{b.status === "PENDING" ? (b.emailVerifiedAt ? " · Email verified" : " · Awaiting email verification") : ""}</p>
-                </div>
-
-                {b.discount ? <div className="mt-2 flex items-center gap-1 text-emerald-600 text-xs"><Tag size={13} />Discount: -{formatPrice(b.discount)} {b.promoCode ? `(${b.promoCode})` : ""}</div> : null}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
+      )}
+
+      {cancelTarget && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-3">
+          <div className="bg-white rounded-3xl p-5 w-full max-w-md shadow-2xl">
+            <div className="flex items-start gap-3 mb-4"><div className="w-11 h-11 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center shrink-0"><AlertTriangle size={22} /></div><div><h3 className="text-lg font-black text-gray-900">Cancel customer booking?</h3><p className="text-sm text-gray-500 mt-1">This is customer-facing and will queue cancellation notice. Staff reject is handled in Staff Portal, not here.</p></div></div>
+            <p className="text-sm font-bold text-gray-700 mb-2">Cancellation reason</p>
+            <select value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} className="w-full min-h-12 rounded-2xl border border-gray-200 px-4 mb-3 bg-white">{cancellationReasons.map((r) => <option key={r} value={r}>{r}</option>)}</select>
+            {cancelReason === "Other" && <textarea value={cancelOther} onChange={(e) => setCancelOther(e.target.value)} className="w-full min-h-24 rounded-2xl border border-gray-200 px-4 py-3 mb-3" placeholder="Enter reason" />}
+            <div className="grid grid-cols-2 gap-3"><button onClick={() => setCancelTarget(null)} className="btn-secondary min-h-11">Back</button><button onClick={submitCancel} className="min-h-11 rounded-xl bg-red-600 text-white font-bold">Cancel booking</button></div>
+          </div>
+        </div>
       )}
     </div>
   );

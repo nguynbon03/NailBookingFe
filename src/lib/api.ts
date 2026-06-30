@@ -64,8 +64,17 @@ export const api = {
   },
   admin: {
     stats: () => fetchAPI("/api/admin/stats"),
-    bookings: () => fetchAPI("/api/bookings"),
+    bookings: (params?: { date?: string; includeArchived?: boolean; status?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.date) query.set("date", params.date);
+      if (params?.includeArchived) query.set("includeArchived", "1");
+      if (params?.status) query.set("status", params.status);
+      const qs = query.toString();
+      return fetchAPI(`/api/bookings${qs ? `?${qs}` : ""}`);
+    },
     updateBookingStatus: (id: string, status: string, staffId?: string | null, cancellationReason?: string | null) => fetchAPI("/api/bookings", { method: "PUT", body: JSON.stringify({ id, status, staffId, cancellationReason }) }),
+    archiveBooking: (id: string) => fetchAPI("/api/bookings", { method: "DELETE", body: JSON.stringify({ id }) }),
+    deleteBooking: (id: string) => fetchAPI("/api/bookings", { method: "DELETE", body: JSON.stringify({ id, hardDelete: true }) }),
     services: () => fetchAPI("/api/admin/services"),
     createService: (data: any) => fetchAPI("/api/admin/services", { method: "POST", body: JSON.stringify(data) }),
     updateService: (data: any) => fetchAPI("/api/admin/services", { method: "PUT", body: JSON.stringify(data) }),
