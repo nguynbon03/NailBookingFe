@@ -37,18 +37,27 @@ export default function AdminLeaveRequestsPage() {
   const [items, setItems] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
 
   const refresh = () => {
     setError("");
+    setNotice("");
     setLoading(true);
     api.admin.leaves()
-      .then((data: any) => setItems(data.leaveRequests || []))
+      .then((data: any) => {
+        setItems(data.leaveRequests || []);
+        setSelected({});
+      })
       .catch((err: any) => setError(err.message || "Could not load leave requests"))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { refresh(); }, []);
+
+  const selectedIds = useMemo(() => Object.entries(selected).filter(([, value]) => value).map(([id]) => id), [selected]);
+  const allSelected = items.length > 0 && selectedIds.length === items.length;
 
   const review = async (id: string, status: "APPROVED" | "REJECTED") => {
     try {
@@ -68,8 +77,35 @@ export default function AdminLeaveRequestsPage() {
     try {
       await api.admin.deleteLeave(item.id);
       setItems((rows) => rows.filter((row) => row.id !== item.id));
+      setSelected((current) => ({ ...current, [item.id]: false }));
     } catch (err: any) {
       setError(err.message || "Could not delete leave request");
+    }
+  };
+
+  const deleteSelected = async () => {
+    if (!selectedIds.length) return;
+    if (!window.confirm(`Delete ${selectedIds.length} selected leave ticket(s)? This cannot be undone.`)) return;
+    try {
+      const result = await api.admin.deleteLeaves(selectedIds);
+      setItems((rows) => rows.filter((row) => !selectedIds.includes(row.id)));
+      setSelected({});
+      setNotice(`Deleted ${result.deleted || selectedIds.length} leave ticket(s).`);
+    } catch (err: any) {
+      setError(err.message || "Could not delete selected leave requests");
+    }
+  };
+
+  const deleteAll = async () => {
+    if (!items.length) return;
+    if (!window.confirm("Delete ALL leave requests from the admin list? This cannot be undone.")) return;
+    try {
+      const result = await api.admin.deleteAllLeaves();
+      setItems([]);
+      setSelected({});
+      setNotice(`Deleted ${result.deleted || 0} leave ticket(s).`);
+    } catch (err: any) {
+      setError(err.message || "Could not delete all leave requests");
     }
   };
 
@@ -87,16 +123,31 @@ export default function AdminLeaveRequestsPage() {
           <h2 className="text-xl sm:text-2xl font-black text-gray-900 mt-1">Staff Leave Requests</h2>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">Approve leave tickets so approved days are automatically removed from staff availability.</p>
         </div>
-        <button onClick={refresh} className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-bold inline-flex items-center gap-2"><RefreshCw size={16} />Refresh</button>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={refresh} className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-bold inline-flex items-center gap-2"><RefreshCw size={16} />Refresh</button>
+          <button onClick={deleteSelected} disabled={!selectedIds.length} className="h-10 px-3 rounded-xl bg-red-50 text-red-600 border border-red-100 text-sm font-bold disabled:opacity-40 inline-flex items-center gap-2"><Trash2 size={16} />Delete selected</button>
+          <button onClick={deleteAll} disabled={!items.length} className="h-10 px-3 rounded-xl bg-red-600 text-white text-sm font-bold disabled:opacity-40 inline-flex items-center gap-2"><Trash2 size={16} />Delete all</button>
+        </div>
       </div>
 
       {error && <div className="mb-4 rounded-xl bg-orange-50 text-orange-700 p-3 text-sm flex gap-2"><AlertTriangle size={17} className="shrink-0" />{error}</div>}
+      {notice && <div className="mb-4 rounded-xl bg-emerald-50 text-emerald-700 p-3 text-sm font-bold">{notice}</div>}
 
       <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <div className="bg-white rounded-2xl border border-amber-100 p-3 sm:p-5"><p className="text-[11px] font-black text-amber-500 uppercase">Pending</p><p className="text-2xl font-black text-gray-900">{stats.pending}</p></div>
         <div className="bg-white rounded-2xl border border-emerald-100 p-3 sm:p-5"><p className="text-[11px] font-black text-emerald-500 uppercase">Approved</p><p className="text-2xl font-black text-gray-900">{stats.approved}</p></div>
         <div className="bg-white rounded-2xl border border-red-100 p-3 sm:p-5"><p className="text-[11px] font-black text-red-500 uppercase">Rejected</p><p className="text-2xl font-black text-gray-900">{stats.rejected}</p></div>
       </div>
+
+      {items.length > 0 && (
+        <div className="mb-3 rounded-2xl bg-white border border-gray-100 p-3 flex items-center justify-between gap-3">
+          <label className="inline-flex items-center gap-2 text-sm font-black text-gray-700">
+            <input type="checkbox" checked={allSelected} onChange={(e) => setSelected(e.target.checked ? Object.fromEntries(items.map((item) => [item.id, true])) : {})} className="h-4 w-4 accent-pink-600" />
+            Tick all visible leave tickets
+          </label>
+          <span className="text-xs text-gray-400">{selectedIds.length} selected</span>
+        </div>
+      )}
 
       {loading ? <div className="py-12 text-center text-gray-400">Loading leave requests...</div> : items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400">No leave requests yet.</div>
@@ -105,17 +156,20 @@ export default function AdminLeaveRequestsPage() {
           {items.map((item) => (
             <div key={item.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <CalendarOff size={17} className="text-sky-500" />
-                    <h3 className="font-black text-gray-900 truncate">{item.staff?.name || "Staff"}</h3>
-                    <span className={statusClass(item.status)}>{item.status}</span>
+                <div className="min-w-0 flex gap-3">
+                  <input type="checkbox" checked={Boolean(selected[item.id])} onChange={(e) => setSelected((current) => ({ ...current, [item.id]: e.target.checked }))} className="mt-1 h-4 w-4 accent-pink-600 shrink-0" />
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <CalendarOff size={17} className="text-sky-500" />
+                      <h3 className="font-black text-gray-900 truncate">{item.staff?.name || "Staff"}</h3>
+                      <span className={statusClass(item.status)}>{item.status}</span>
+                    </div>
+                    <p className="text-sm text-gray-600"><b>{shortDate(item.startDate)} → {shortDate(item.endDate)}</b> · {item.daysCount} day(s)</p>
+                    <p className="text-sm text-gray-500 mt-1">Reason: {item.reason}</p>
+                    <p className="text-xs text-gray-400 mt-1">Requested: {new Date(item.createdAt).toLocaleString()} · {item.staff?.email}</p>
+                    {item.reviewedAt && <p className="text-xs text-gray-400 mt-1">Reviewed by {item.reviewedBy || "Manager"} at {new Date(item.reviewedAt).toLocaleString()}</p>}
+                    {item.managerNote && <p className="text-xs text-gray-500 mt-1">Manager note: {item.managerNote}</p>}
                   </div>
-                  <p className="text-sm text-gray-600"><b>{shortDate(item.startDate)} → {shortDate(item.endDate)}</b> · {item.daysCount} day(s)</p>
-                  <p className="text-sm text-gray-500 mt-1">Reason: {item.reason}</p>
-                  <p className="text-xs text-gray-400 mt-1">Requested: {new Date(item.createdAt).toLocaleString()} · {item.staff?.email}</p>
-                  {item.reviewedAt && <p className="text-xs text-gray-400 mt-1">Reviewed by {item.reviewedBy || "Manager"} at {new Date(item.reviewedAt).toLocaleString()}</p>}
-                  {item.managerNote && <p className="text-xs text-gray-500 mt-1">Manager note: {item.managerNote}</p>}
                 </div>
                 {item.status === "PENDING" ? (
                   <div className="w-full lg:w-[360px] shrink-0">

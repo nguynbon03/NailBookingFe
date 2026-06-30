@@ -46,10 +46,13 @@ export const api = {
     },
   },
   notifications: {
-    list: (audience?: string, take = 50) => fetchAPI(`/api/notifications?take=${take}${audience ? `&audience=${audience}` : ""}`),
-    markAll: (audience: string) => fetchAPI("/api/notifications", { method: "PUT", body: JSON.stringify({ audience, read: true }) }),
-    markOne: (id: string, read = true, audience = "admin") => fetchAPI("/api/notifications", { method: "PUT", body: JSON.stringify({ id, read, audience }) }),
-    deleteOne: (id: string, audience = "admin") => fetchAPI("/api/notifications", { method: "DELETE", body: JSON.stringify({ id, audience }) }),
+    list: (audience?: string, take = 50, category?: string) => fetchAPI(`/api/notifications?take=${take}${audience ? `&audience=${audience}` : ""}${category ? `&category=${category}` : ""}`),
+    markAll: (audience: string, category?: string) => fetchAPI("/api/notifications", { method: "PUT", body: JSON.stringify({ audience, read: true, category }) }),
+    markOne: (id: string, read = true, audience = "admin", category?: string) => fetchAPI("/api/notifications", { method: "PUT", body: JSON.stringify({ id, read, audience, category }) }),
+    deleteOne: (id: string, audience = "admin", category?: string) => fetchAPI("/api/notifications", { method: "DELETE", body: JSON.stringify({ id, audience, category }) }),
+    deleteMany: (ids: string[], audience = "admin", category?: string) => fetchAPI("/api/notifications", { method: "DELETE", body: JSON.stringify({ ids, audience, category }) }),
+    deleteAll: (audience = "admin", category?: string) => fetchAPI("/api/notifications", { method: "DELETE", body: JSON.stringify({ audience, category, readOnly: false }) }),
+    action: (notificationId: string, action: string, managerNote?: string) => fetchAPI("/api/notifications/action", { method: "POST", body: JSON.stringify({ notificationId, action, managerNote }) }),
   },
   promoCodes: {
     validate: (code: string, subtotal: number) =>
@@ -110,6 +113,8 @@ export const api = {
     leaves: () => fetchAPI("/api/staff/leave?scope=all"),
     reviewLeave: (id: string, status: string, managerNote?: string) => fetchAPI("/api/staff/leave", { method: "PUT", body: JSON.stringify({ id, status, managerNote }) }),
     deleteLeave: (id: string) => fetchAPI("/api/staff/leave", { method: "DELETE", body: JSON.stringify({ id, hardDelete: true }) }),
+    deleteLeaves: (ids: string[]) => fetchAPI("/api/staff/leave", { method: "DELETE", body: JSON.stringify({ ids, hardDelete: true }) }),
+    deleteAllLeaves: () => fetchAPI("/api/staff/leave", { method: "DELETE", body: JSON.stringify({ deleteAll: true, hardDelete: true }) }),
     customers: (params?: { period?: string; date?: string }) => {
       const query = new URLSearchParams();
       if (params?.period) query.set("period", params.period);
