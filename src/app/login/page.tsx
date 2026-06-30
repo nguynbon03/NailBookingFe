@@ -55,7 +55,7 @@ export default function LoginPage() {
         },
       });
       googleButtonRef.current.innerHTML = "";
-      window.google.accounts.id.renderButton(googleButtonRef.current, { theme: "outline", size: "large", width: "100%", text: "continue_with" });
+      window.google.accounts.id.renderButton(googleButtonRef.current, { theme: "outline", size: "large", width: 360, text: "continue_with" });
       setGoogleReady(true);
     };
 
