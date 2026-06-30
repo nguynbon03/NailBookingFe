@@ -83,6 +83,11 @@ function dateTimeText(value?: string | null) {
   return Number.isNaN(d.getTime()) ? value : d.toLocaleString();
 }
 
+function sameBookingDate(value: string, isoDate: string) {
+  if (!isoDate) return true;
+  return String(value || "").slice(0, 10) === isoDate;
+}
+
 export default function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,13 +103,13 @@ export default function AdminBookings() {
   const refresh = () => {
     setError("");
     setLoading(true);
-    api.admin.bookings({ date: dateFilter || undefined, includeArchived })
+    api.admin.bookings({ includeArchived })
       .then((d: any) => { setBookings(d.bookings || []); setSelectedIds([]); })
       .catch((err: any) => setError(err.message || "Failed to load bookings"))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { refresh(); }, [dateFilter, includeArchived]);
+  useEffect(() => { refresh(); }, [includeArchived]);
 
   const askCancelReason = (booking: Booking) => {
     setCancelTarget(booking);
@@ -194,7 +199,8 @@ export default function AdminBookings() {
     }
   };
 
-  const filtered = filter === "all" ? bookings : bookings.filter((b) => b.status === filter);
+  const dateScopedBookings = dateFilter ? bookings.filter((b) => sameBookingDate(b.date, dateFilter)) : bookings;
+  const filtered = filter === "all" ? dateScopedBookings : dateScopedBookings.filter((b) => b.status === filter);
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
       PENDING: "bg-orange-100 text-orange-700",
@@ -260,12 +266,14 @@ export default function AdminBookings() {
           </label>
         </div>
 
-        {!dateFilter && <p className="text-xs text-gray-400 font-semibold">Showing all active bookings, newest first. Pick a date only when you want a daily view.</p>}
+        <p className="text-xs text-gray-400 font-semibold">
+          {dateFilter ? `Showing ${dateScopedBookings.length} booking(s) for ${dateFilter}. Click All days to see every booking from Dashboard.` : "Showing all active bookings, newest first. Pick a date only when you want a daily view."}
+        </p>
 
         <div className="-mx-3 sm:mx-0 overflow-x-auto pb-1 px-3 sm:px-0">
           <div className="flex gap-2 min-w-max">
             {filterItems.map((f) => {
-              const count = f === "all" ? bookings.length : bookings.filter((b) => b.status === f).length;
+              const count = f === "all" ? dateScopedBookings.length : dateScopedBookings.filter((b) => b.status === f).length;
               return (
                 <button key={f} onClick={() => setFilter(f)} className={cn("px-3 py-2 rounded-xl text-xs sm:text-sm font-bold capitalize whitespace-nowrap", filter === f ? "bg-pink-600 text-white shadow-sm" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50")}>
                   {f === "all" ? "All" : statusLabels[f]} <span className="opacity-70">{count}</span>
@@ -289,7 +297,7 @@ export default function AdminBookings() {
       {loading ? (
         <div className="text-center py-12 text-gray-400">Loading bookings...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">No bookings found for this filter.</div>
+        <div className="text-center py-12 text-gray-400">{dateFilter ? "No bookings found for this date/filter. Click All days to see all bookings." : "No bookings found for this filter."}</div>
       ) : (
         <>
           <div className="hidden lg:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
