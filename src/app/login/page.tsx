@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, Mail, Lock, LogIn } from "lucide-react";
+import { Mail, Lock, LogIn } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
+import BrandLogo from "@/components/BrandLogo";
 
 function redirectForRole(role: string) {
   const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
@@ -44,8 +45,10 @@ export default function LoginPage() {
     <main className="pt-16 min-h-screen flex items-center justify-center bg-gradient-to-b from-pink-50 to-white">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md mx-4">
         <div className="bg-white rounded-3xl p-8 shadow-xl shadow-pink-100/50 border border-pink-100">
-          <div className="text-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white mx-auto mb-4"><Sparkles size={28} /></div>
+          <div className="text-center mb-7">
+            <div className="mb-5 flex justify-center">
+              <BrandLogo variant="auth" />
+            </div>
             <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
             <p className="text-gray-500 text-sm mt-1">Sign in before booking. Customer booking email must match this account.</p>
           </div>

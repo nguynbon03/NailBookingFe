@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Menu, X, Phone, CalendarDays, Sparkles, LogIn, User, LogOut, ClipboardList, Settings } from "lucide-react";
+import { Menu, X, Phone, CalendarDays, LogIn, User, LogOut, ClipboardList, Settings } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import BrandLogo from "@/components/BrandLogo";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -74,11 +75,8 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-18">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-pink-200 group-hover:scale-110 transition-transform">
-              <Sparkles size={18} />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-pink-500 to-rose-600 bg-clip-text text-transparent">Nail Lounge</span>
+          <Link href="/" className="flex items-center group" aria-label="The Nail Lounge home">
+            <BrandLogo variant="nav" showSubtitle />
           </Link>
 
           <div className="hidden lg:flex items-center gap-1">
