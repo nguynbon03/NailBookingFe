@@ -5,23 +5,15 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { api } from "@/lib/api";
-import { AlertCircle, CheckCircle2, Clock3, Copy, Loader2, PoundSterling, ShieldCheck } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock3, Loader2, PoundSterling, ShieldCheck } from "lucide-react";
 import { formatPrice } from "@/lib/service-utils";
 
-type HoldState = "loading" | "locked" | "error";
-
-function secondsLeft(value?: string | null) {
-  if (!value) return 0;
-  return Math.max(0, Math.floor((new Date(value).getTime() - Date.now()) / 1000));
-}
+type PaymentState = "loading" | "success" | "resolution" | "error";
 
 export default function TransferPaymentPage() {
-  const [state, setState] = useState<HoldState>("loading");
+  const [state, setState] = useState<PaymentState>("loading");
   const [error, setError] = useState("");
   const [result, setResult] = useState<any | null>(null);
-  const [left, setLeft] = useState(0);
-  const [claiming, setClaiming] = useState(false);
-  const [claimMessage, setClaimMessage] = useState("");
 
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get("token") || "";
@@ -30,44 +22,22 @@ export default function TransferPaymentPage() {
       setError("Transfer token is missing.");
       return;
     }
+
     api.payments.hold(token)
       .then((data: any) => {
         setResult(data);
-        setLeft(secondsLeft(data.expiresAt));
-        setState("locked");
+        setState(data.needsAdminResolution ? "resolution" : "success");
       })
       .catch((err: any) => {
-        setError(err.message || "Could not lock staff slot.");
+        setError(err.message || "Could not confirm secure transfer.");
         setState("error");
       });
   }, []);
 
-  useEffect(() => {
-    if (state !== "locked") return;
-    const t = setInterval(() => setLeft(secondsLeft(result?.expiresAt)), 1000);
-    return () => clearInterval(t);
-  }, [state, result?.expiresAt]);
-
   const booking = result?.booking;
-  const bank = result?.bank || {};
   const reference = result?.reference || booking?.paymentReference || (booking?.id ? `NL-${booking.id.slice(-8).toUpperCase()}` : "");
   const services = useMemo(() => (booking?.services || []).map((item: any) => item.service?.name).filter(Boolean).join(", "), [booking]);
-  const copy = async (value: string) => { try { await navigator.clipboard.writeText(value); } catch {} };
-  const markTransferred = async () => {
-    const token = new URLSearchParams(window.location.search).get("token") || "";
-    if (!token || claiming || left <= 0) return;
-    setClaiming(true);
-    setClaimMessage("");
-    try {
-      const data = await api.payments.claimTransfer(token);
-      setResult((current: any) => ({ ...(current || {}), booking: data.booking || current?.booking }));
-      setClaimMessage("Transfer submitted. The shop will verify the bank account and confirm the job for the held staff.");
-    } catch (err: any) {
-      setClaimMessage(err.message || "Could not submit transfer confirmation.");
-    } finally {
-      setClaiming(false);
-    }
-  };
+  const assignedStaff = booking?.staff?.name || booking?.requestedStaff?.name || "Shop team";
 
   return (
     <>
@@ -75,14 +45,14 @@ export default function TransferPaymentPage() {
       <main className="pt-20 min-h-screen bg-gradient-to-b from-pink-50 to-white px-4 py-10">
         <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-pink-100 shadow-xl shadow-pink-100/50 p-5 sm:p-8">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center mx-auto mb-4">
-              {state === "loading" ? <Loader2 className="animate-spin" size={30} /> : state === "locked" ? <ShieldCheck size={32} /> : <AlertCircle size={32} />}
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${state === "resolution" ? "bg-amber-50 text-amber-600" : state === "error" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}`}>
+              {state === "loading" ? <Loader2 className="animate-spin" size={30} /> : state === "error" ? <AlertCircle size={32} /> : state === "resolution" ? <Clock3 size={32} /> : <ShieldCheck size={32} />}
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-gray-900">Secure Bank Transfer</h1>
-            <p className="text-sm text-gray-500 mt-2">Opening this page locks one staff member for your selected date/time for 3 minutes.</p>
+            <p className="text-sm text-gray-500 mt-2">Opening your secure link now records the payment. No extra transfer confirmation button is needed.</p>
           </div>
 
-          {state === "loading" && <div className="rounded-2xl bg-gray-50 p-6 text-center text-gray-500">Locking staff slot...</div>}
+          {state === "loading" && <div className="rounded-2xl bg-gray-50 p-6 text-center text-gray-500">Confirming your secure transfer...</div>}
 
           {state === "error" && (
             <div className="rounded-2xl bg-red-50 border border-red-100 p-5 text-red-700 text-sm">
@@ -91,50 +61,48 @@ export default function TransferPaymentPage() {
             </div>
           )}
 
-          {state === "locked" && booking && (
+          {(state === "success" || state === "resolution") && booking && (
             <div className="space-y-5">
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 flex gap-3 text-emerald-800">
-                <CheckCircle2 size={22} className="shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-black">Staff slot locked</p>
-                  <p className="text-sm">Transfer within this window. Admin will confirm payment before this appears on staff schedule.</p>
+              {state === "success" ? (
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 flex gap-3 text-emerald-800">
+                  <CheckCircle2 size={22} className="shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-black">Payment recorded — booking confirmed</p>
+                    <p className="text-sm">Your booking is confirmed and assigned to {assignedStaff}. The shop has been notified.</p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 flex gap-3 text-amber-800">
+                  <Clock3 size={22} className="shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-black">Payment recorded — shop will resolve staff/time</p>
+                    <p className="text-sm">No staff was free at this exact time. Admin will contact you to move the booking, find a replacement staff member, or arrange a refund if needed.</p>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="rounded-2xl bg-gray-50 p-4"><p className="text-xs text-gray-400 font-black uppercase">Reference</p><button onClick={() => copy(reference)} className="mt-1 font-black text-gray-900 inline-flex items-center gap-1">{reference}<Copy size={14} /></button></div>
+                <div className="rounded-2xl bg-gray-50 p-4"><p className="text-xs text-gray-400 font-black uppercase">Reference</p><p className="mt-1 font-black text-gray-900">{reference}</p></div>
                 <div className="rounded-2xl bg-gray-50 p-4"><p className="text-xs text-gray-400 font-black uppercase">Amount</p><p className="mt-1 font-black text-pink-600"><PoundSterling size={15} className="inline" /> {formatPrice(booking.totalPrice)}</p></div>
-                <div className="rounded-2xl bg-gray-50 p-4"><p className="text-xs text-gray-400 font-black uppercase">Lock timer</p><p className="mt-1 font-black text-orange-600"><Clock3 size={15} className="inline" /> {left}s</p></div>
+                <div className="rounded-2xl bg-gray-50 p-4"><p className="text-xs text-gray-400 font-black uppercase">Status</p><p className={`mt-1 font-black ${state === "success" ? "text-emerald-600" : "text-amber-600"}`}>{state === "success" ? "Confirmed" : "Admin review"}</p></div>
               </div>
 
               <div className="rounded-2xl border border-pink-100 p-4 text-sm text-gray-700 space-y-2">
                 <p><b>Name:</b> {booking.customerName}</p>
                 <p><b>Service:</b> {services || "Selected service"}</p>
                 <p><b>Date/time:</b> {String(booking.date).slice(0, 10)} at {booking.time}</p>
-                <p><b>Assigned staff hold:</b> {booking.staff?.name || "Locked staff"}</p>
-              </div>
-
-              <div className="rounded-2xl bg-gray-900 text-white p-5 space-y-3">
-                <h2 className="text-lg font-black">Bank details</h2>
-                <p><span className="text-gray-400">Account name:</span> <b>{bank.accountName || "The Nail Lounge @ Stokesley"}</b></p>
-                {bank.bankName && <p><span className="text-gray-400">Bank:</span> <b>{bank.bankName}</b></p>}
-                {bank.sortCode && <p><span className="text-gray-400">Sort code:</span> <button onClick={() => copy(bank.sortCode)} className="font-black underline">{bank.sortCode}</button></p>}
-                {bank.accountNumber && <p><span className="text-gray-400">Account number:</span> <button onClick={() => copy(bank.accountNumber)} className="font-black underline">{bank.accountNumber}</button></p>}
-                <p><span className="text-gray-400">Transfer reference:</span> <button onClick={() => copy(reference)} className="font-black underline">{reference}</button></p>
-                <p className="text-xs text-gray-300">{bank.instructions}</p>
+                <p><b>Staff:</b> {state === "success" ? assignedStaff : "Pending admin arrangement"}</p>
               </div>
 
               <div className="rounded-3xl border border-pink-100 bg-gradient-to-r from-pink-50 to-rose-50 p-5">
-                <h3 className="font-black text-gray-900 mb-2">After you transfer</h3>
-                <p className="text-sm text-gray-600 mb-4">Tap the button below after sending the bank transfer. This notifies the shop and keeps the held staff attached to this booking. The booking becomes confirmed only after the shop verifies the money arrived.</p>
-                <button onClick={markTransferred} disabled={claiming || left <= 0} className="w-full rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 py-4 font-black text-white shadow-lg shadow-pink-100 disabled:bg-gray-200 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400">
-                  {claiming ? "Submitting..." : "I have sent the bank transfer"}
-                </button>
-                {claimMessage && <p className="mt-3 text-sm font-semibold text-pink-700">{claimMessage}</p>}
+                <h3 className="font-black text-gray-900 mb-2">What happens next?</h3>
+                <p className="text-sm text-gray-600">{result?.message || (state === "success" ? "You can view your confirmed appointment in My Bookings." : "The Nail Lounge team will contact you if they need to change staff or time.")}</p>
               </div>
 
-              {left <= 0 && <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4 text-sm text-amber-800">The 3-minute lock has expired. Do not transfer until you create a new lock or contact the shop.</div>}
-              <Link href="/my-bookings" className="btn-secondary inline-flex">View my bookings</Link>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/my-bookings" className="btn-primary inline-flex">View my bookings</Link>
+                <Link href="/booking" className="btn-secondary inline-flex">Book another slot</Link>
+              </div>
             </div>
           )}
         </div>
