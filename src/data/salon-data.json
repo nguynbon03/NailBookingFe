@@ -62,17 +62,17 @@
     ]
   },
   "testimonials": [
-    { "name": "Megan S", "text": "So happy with my nails! The atmosphere is great, and the staff really takes care of you. Their beauty services are just as amazing!" },
-    { "name": "Lucy H", "text": "Great service, friendly staff, and beautiful nails every time! I always get compliments after visiting The Nail Lounge @ Stokesley. Highly recommended!" },
-    { "name": "Isabelle C", "text": "From start to finish, my experience was amazing. The salon is so relaxing, and my nails and brows were done with so much care. Can't wait to return!" },
-    { "name": "Angela Stevens", "text": "I have just had the most amazing manicure and pedicure at The Nail Lounge @ Stokesley. The staff are so welcoming and they definitely know their craft!" },
-    { "name": "Sophie W", "text": "Absolutely love my nails! The team at The Nail Lounge @ Stokesley is so talented and professional. My gel manicure lasted weeks without chipping." },
-    { "name": "Emma T", "text": "Such a relaxing experience! The salon is beautiful, the staff is welcoming, and my nails look flawless. I've finally found my go-to spot!" },
-    { "name": "Laura P", "text": "The attention to detail here is outstanding. My nails are always perfect, and my brows have never looked better after their expert threading." },
-    { "name": "Jessica R", "text": "A fantastic salon! The quality of work is incredible, and the customer service is top-notch. My nails and treatments are always perfect!" },
-    { "name": "Charlotte M", "text": "Had the most amazing pedicure at The Nail Lounge @ Stokesley! My feet feel so soft, and the polish is still perfect. Definitely a must-visit!" },
-    { "name": "Rachel D", "text": "Such a wonderful experience! The staffs are friendly, the salon is spotless, and my nails, lashes, and brows have never looked better. Five-star service!" },
-    { "name": "Olivia K", "text": "I love how professional and caring the team is. My nails always turn out exactly how I want them, and their lash extensions are stunning!" },
-    { "name": "Natalie B", "text": "The best manicure I've had in ages! The nail technicians are so skilled. Highly recommend!" }
+    { "name": "Megan S", "avatar": "https://i.pravatar.cc/150?u=megan", "text": "So happy with my nails! The atmosphere is great, and the staff really takes care of you. Their beauty services are just as amazing!" },
+    { "name": "Lucy H", "avatar": "https://i.pravatar.cc/150?u=lucy", "text": "Great service, friendly staff, and beautiful nails every time! I always get compliments after visiting The Nail Lounge @ Stokesley. Highly recommended!" },
+    { "name": "Isabelle C", "avatar": "https://i.pravatar.cc/150?u=isabelle", "text": "From start to finish, my experience was amazing. The salon is so relaxing, and my nails and brows were done with so much care. Can't wait to return!" },
+    { "name": "Angela Stevens", "avatar": "https://i.pravatar.cc/150?u=angela", "text": "I have just had the most amazing manicure and pedicure at The Nail Lounge @ Stokesley. The staff are so welcoming and they definitely know their craft!" },
+    { "name": "Sophie W", "avatar": "https://i.pravatar.cc/150?u=sophie", "text": "Absolutely love my nails! The team at The Nail Lounge @ Stokesley is so talented and professional. My gel manicure lasted weeks without chipping." },
+    { "name": "Emma T", "avatar": "https://i.pravatar.cc/150?u=emma", "text": "Such a relaxing experience! The salon is beautiful, the staff is welcoming, and my nails look flawless. I've finally found my go-to spot!" },
+    { "name": "Laura P", "avatar": "https://i.pravatar.cc/150?u=laura", "text": "The attention to detail here is outstanding. My nails are always perfect, and my brows have never looked better after their expert threading." },
+    { "name": "Jessica R", "avatar": "https://i.pravatar.cc/150?u=jessica", "text": "A fantastic salon! The quality of work is incredible, and the customer service is top-notch. My nails and treatments are always perfect!" },
+    { "name": "Charlotte M", "avatar": "https://i.pravatar.cc/150?u=charlotte", "text": "Had the most amazing pedicure at The Nail Lounge @ Stokesley! My feet feel so soft, and the polish is still perfect. Definitely a must-visit!" },
+    { "name": "Rachel D", "avatar": "https://i.pravatar.cc/150?u=rachel", "text": "Such a wonderful experience! The staffs are friendly, the salon is spotless, and my nails, lashes, and brows have never looked better. Five-star service!" },
+    { "name": "Olivia K", "avatar": "https://i.pravatar.cc/150?u=olivia", "text": "I love how professional and caring the team is. My nails always turn out exactly how I want them, and their lash extensions are stunning!" },
+    { "name": "Natalie B", "avatar": "https://i.pravatar.cc/150?u=natalie", "text": "The best manicure I've had in ages! The nail technicians are so skilled. Highly recommend!" }
   ]
 }
