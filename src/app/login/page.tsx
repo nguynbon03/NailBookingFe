@@ -1,82 +1,39 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Mail, Lock, LogIn } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 
-declare global {
-  interface Window {
-    google?: any;
-  }
-}
-
-const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
-
 function redirectForRole(role: string) {
   const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const next = params.get("next");
-  if (next && next.startsWith("/")) return next;
+  if (next && next.startsWith("/") && !next.startsWith("//")) return next;
   return role === "STAFF" ? "/staff" : ["ADMIN", "MANAGER"].includes(role) ? "/admin" : "/";
 }
 
+function googleStartUrl() {
+  if (typeof window === "undefined") return "/api/auth/google";
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get("next") || "/";
+  return `/api/auth/google?next=${encodeURIComponent(next)}`;
+}
+
 export default function LoginPage() {
-  const { login, loginWithGoogle } = useAuth();
-  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [googleReady, setGoogleReady] = useState(false);
-
-  const finishLogin = (user: any) => {
-    window.location.href = redirectForRole(user.role);
-  };
-
-  useEffect(() => {
-    if (!googleClientId) return;
-    const render = () => {
-      if (!window.google || !googleButtonRef.current) return;
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: async (response: any) => {
-          setError("");
-          setLoading(true);
-          try {
-            const user = await loginWithGoogle(response.credential);
-            finishLogin(user);
-          } catch (err: any) {
-            setError(err.message || "Google login failed");
-          } finally {
-            setLoading(false);
-          }
-        },
-      });
-      googleButtonRef.current.innerHTML = "";
-      window.google.accounts.id.renderButton(googleButtonRef.current, { theme: "outline", size: "large", width: 360, text: "continue_with" });
-      setGoogleReady(true);
-    };
-
-    if (window.google) {
-      render();
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = render;
-    script.onerror = () => setError("Could not load Google login script");
-    document.head.appendChild(script);
-  }, [loginWithGoogle]);
+  const googleHref = useMemo(() => googleStartUrl(), []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setLoading(true);
     try {
       const user = await login(email, password);
-      finishLogin(user);
+      window.location.href = redirectForRole(user.role);
     }
     catch (err: any) { setError(err.message || "Login failed"); }
     finally { setLoading(false); }
@@ -93,13 +50,10 @@ export default function LoginPage() {
             <p className="text-gray-500 text-sm mt-1">Sign in before booking. Customer booking email must match this account.</p>
           </div>
           {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm">{error}</div>}
-          <div className="mb-4">
-            {googleClientId ? (
-              <div className="min-h-11 rounded-xl flex items-center justify-center" ref={googleButtonRef}>{!googleReady && <span className="text-sm text-gray-400">Loading Google...</span>}</div>
-            ) : (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">Google login is ready in code. Set NEXT_PUBLIC_GOOGLE_CLIENT_ID and GOOGLE_CLIENT_ID in Coolify to enable the button.</div>
-            )}
-          </div>
+          <a href={googleHref} className="mb-4 w-full rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-800 font-bold py-3.5 px-4 flex items-center justify-center gap-3 transition-colors shadow-sm">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-sm font-black text-blue-600">G</span>
+            Continue with Google
+          </a>
           <div className="flex items-center gap-3 mb-4"><div className="h-px bg-gray-100 flex-1" /><span className="text-xs text-gray-400 font-bold">or email/password</span><div className="h-px bg-gray-100 flex-1" /></div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative"><Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="text" value={email} onChange={e => setEmail(e.target.value)} placeholder="Username or email" required className="w-full pl-10 p-3.5 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" /></div>
