@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Clock,
   ArrowRight,
+  ImageIcon,
 } from "lucide-react";
 import Link from "next/link";
 import salonData from "@/data/salon-data.json";
@@ -30,10 +31,19 @@ const gradients = [
   "from-amber-500 to-orange-400","from-sky-500 to-cyan-400","from-fuchsia-500 to-pink-400",
 ];
 
+// Map services to gallery images for thumbnails
+const galleryImages = [
+  "/images/gallery-1.jpg","/images/gallery-2.jpg","/images/gallery-3.jpg","/images/gallery-4.jpg","/images/gallery-5.jpg",
+  "/images/gallery-6.jpg","/images/gallery-7.jpg","/images/gallery-8.jpg","/images/gallery-9.jpg","/images/gallery-10.jpg",
+];
+function getServiceImage(i: number) {
+  return galleryImages[i % galleryImages.length];
+}
+
 export default function Services() {
   const [openIndex, setOpenIndex] = useState(null);
-  const toggle = (i) => setOpenIndex(openIndex === i ? null : i);
-  const handleBook = (name) => { if (typeof window !== "undefined") localStorage.setItem("selectedService", name); };
+  const toggle = (i: any) => setOpenIndex(openIndex === i ? null : i);
+  const handleBook = (name: string) => { if (typeof window !== "undefined") localStorage.setItem("selectedService", name); };
 
   return (
     <section id="services" className="section-padding bg-gradient-to-b from-white to-pink-50/30">
@@ -65,7 +75,9 @@ export default function Services() {
                       <div className="border-t border-pink-50 px-5 pb-5 pt-2 space-y-2">
                         {cat.services.map((service, si) => (
                           <div key={si} className="flex items-center gap-4 p-3 rounded-xl hover:bg-pink-50/50 transition-colors group">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center text-pink-400 font-bold text-lg shrink-0">{service.name.charAt(0)}</div>
+                            <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gray-100">
+                              <img src={getServiceImage(si + i * 10)} alt={service.name} className="w-full h-full object-cover" />
+                            </div>
                             <div className="flex-1 min-w-0"><p className="font-semibold text-gray-900 text-sm truncate">{service.name}</p><div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5"><Clock size={12} /><span>{service.duration}</span></div></div>
                             <p className="font-bold text-pink-600 text-sm shrink-0">{service.price}</p>
                             <Link href="/booking" onClick={() => handleBook(service.name)} className="shrink-0 inline-flex items-center gap-1 px-4 py-2 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-pink-200/50 transition-all hover:-translate-y-0.5">Book <ArrowRight size={14} /></Link>

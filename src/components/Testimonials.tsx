@@ -6,13 +6,10 @@ import salonData from "@/data/salon-data.json";
 
 const testimonials = salonData.testimonials;
 
-const colors = [
-  "from-pink-400 to-rose-400",
-  "from-violet-400 to-purple-400",
-  "from-amber-400 to-orange-400",
-  "from-emerald-400 to-teal-400",
-  "from-sky-400 to-cyan-400",
-  "from-fuchsia-400 to-pink-400",
+const avatarImages = [
+  "/images/gallery-1.jpg","/images/gallery-2.jpg","/images/gallery-3.jpg","/images/gallery-4.jpg",
+  "/images/gallery-5.jpg","/images/gallery-6.jpg","/images/gallery-7.jpg","/images/gallery-8.jpg",
+  "/images/gallery-9.jpg","/images/gallery-10.jpg",
 ];
 
 export default function Testimonials() {
@@ -44,8 +41,8 @@ export default function Testimonials() {
                   &ldquo;{t.text}&rdquo;
                 </p>
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${colors[i % colors.length]} flex items-center justify-center text-white text-sm font-bold shadow-sm`}>
-                    {t.name.charAt(0)}
+                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-pink-200 flex-shrink-0">
+                    <img src={avatarImages[i % avatarImages.length]} alt={t.name} className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 text-sm">{t.name}</p>

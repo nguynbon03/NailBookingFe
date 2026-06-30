@@ -1,12 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Clock, CalendarDays, User, Phone, Mail, MessageSquare, Check, Sparkles } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, Clock, CalendarDays, User, Phone, Mail, MessageSquare,
+  Check, Sparkles, Upload, Tag, ShieldCheck, Heart, Stethoscope, ImagePlus,
+  X, Star
+} from "lucide-react";
 import Link from "next/link";
 import salonData from "@/data/salon-data.json";
+import { api } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 
 const allServices = [
   ...salonData.categories.extensions_hands,
@@ -23,27 +32,113 @@ const timeSlots = [
   "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
 ];
 
+type Staff = { id: string; name: string; email: string; role: string; active: boolean };
+
 export default function BookingPage() {
   const [step, setStep] = useState(1);
   const [selectedService, setSelectedService] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
-  const [formData, setFormData] = useState({ name: "", phone: "", email: "", notes: "" });
+  const [formData, setFormData] = useState({
+    name: "", phone: "", email: "", notes: "",
+    promoCode: "", healthConfirmed: false, allergiesConfirmed: false, termsAccepted: false,
+  });
+  const [selectedStaff, setSelectedStaff] = useState("any");
+  const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [discount, setDiscount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [promoError, setPromoError] = useState("");
 
-  const handleNext = () => {
-    if (step < 4) setStep(step + 1);
-  };
-  const handleBack = () => {
-    if (step > 1) setStep(step - 1);
-  };
+  useEffect(() => {
+    api.staff.list().then((d: any) => setStaffList(d.staff || [])).catch(() => {});
+  }, []);
 
   const service = allServices.find((s) => s.name === selectedService);
+  const basePrice = service ? parseFloat(service.price.replace(/[£,]/g, "")) : 0;
+  const finalPrice = Math.max(0, basePrice - discount);
+
+  const handleNext = () => { if (step < 4) setStep(step + 1); };
+  const handleBack = () => { if (step > 1) setStep(step - 1); };
+
+  const applyPromo = () => {
+    const code = formData.promoCode.trim().toUpperCase();
+    if (code === "NAIL20") {
+      setDiscount(Math.round(basePrice * 0.2 * 100) / 100);
+      setPromoError("");
+    } else {
+      setDiscount(0);
+      setPromoError("Invalid promotion code");
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setUploadedImage(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => setUploadedImage(null);
+
+  const handleSubmit = async () => {
+    if (!formData.termsAccepted) return;
+    setLoading(true);
+    try {
+      const s = allServices.find((sv) => sv.name === selectedService);
+      await api.bookings.create({
+        customerName: formData.name,
+        customerPhone: formData.phone,
+        customerEmail: formData.email,
+        date: selectedDate,
+        time: selectedTime,
+        serviceIds: s ? [s.name] : [],
+        staffId: selectedStaff === "any" ? null : selectedStaff,
+        notes: formData.notes,
+        promoCode: formData.promoCode || null,
+        discount: discount > 0 ? discount : null,
+        imageBase64: uploadedImage,
+        healthConfirmed: formData.healthConfirmed,
+        allergiesConfirmed: formData.allergiesConfirmed,
+        termsAccepted: formData.termsAccepted,
+      });
+      setSubmitted(true);
+    } catch (e: any) {
+      alert(e.message || "Booking failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const canProceed =
     (step === 1 && selectedService) ||
     (step === 2 && selectedDate) ||
     (step === 3 && selectedTime) ||
     step === 4;
+
+  const step4Valid = formData.name && formData.phone && formData.email && formData.termsAccepted;
+
+  if (submitted) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-16 min-h-screen bg-gradient-to-b from-pink-50/30 to-white flex items-center justify-center">
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-md mx-auto px-6">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-pink-200">
+              <Check size={40} />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-3">Booking Confirmed!</h1>
+            <p className="text-gray-500 mb-2">Thank you, {formData.name}. We&apos;ve received your booking.</p>
+            <p className="text-gray-400 text-sm mb-6">{selectedDate} at {selectedTime} — {service?.name}</p>
+            <Link href="/" className="btn-primary inline-flex">Back to Home</Link>
+          </motion.div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
@@ -63,12 +158,15 @@ export default function BookingPage() {
             <div className="flex items-center justify-between mb-10 max-w-md mx-auto">
               {["Service", "Date", "Time", "Details"].map((label, i) => (
                 <div key={label} className="flex flex-col items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                    i + 1 <= step ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-200" : "bg-gray-100 text-gray-400"
-                  }`}>
+                  <div className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+                    i + 1 <= step
+                      ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-200"
+                      : "bg-gray-100 text-gray-400"
+                  )}>
                     {i + 1 < step ? <Check size={18} /> : i + 1}
                   </div>
-                  <span className={`text-xs mt-1.5 font-medium ${i + 1 <= step ? "text-pink-600" : "text-gray-400"}`}>{label}</span>
+                  <span className={cn("text-xs mt-1.5 font-medium", i + 1 <= step ? "text-pink-600" : "text-gray-400")}>{label}</span>
                 </div>
               ))}
             </div>
@@ -83,16 +181,28 @@ export default function BookingPage() {
                       <button
                         key={`${s.name}-${i}`}
                         onClick={() => setSelectedService(s.name)}
-                        className={`text-left p-4 rounded-2xl border transition-all ${
+                        className={cn(
+                          "text-left p-4 rounded-2xl border transition-all flex items-center gap-3",
                           selectedService === s.name
                             ? "border-pink-400 bg-pink-50 shadow-md shadow-pink-100"
                             : "border-gray-100 bg-white hover:border-pink-200 hover:shadow-sm"
-                        }`}
+                        )}
                       >
-                        <p className="font-semibold text-gray-900">{s.name}</p>
-                        <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
-                          <span className="text-pink-600 font-bold">{s.price}</span>
-                          <span className="flex items-center gap-1"><Clock size={12} />{s.duration}</span>
+                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center text-pink-400 font-bold text-lg shrink-0 overflow-hidden">
+                          {s.image ? (
+                            <img src={s.image} alt={s.name} className="w-full h-full object-cover" />
+                          ) : (
+                            s.name.charAt(0)
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 text-sm truncate">{s.name}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
+                            <Clock size={12} />{s.duration}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-pink-600 text-sm">{s.price}</p>
                         </div>
                       </button>
                     ))}
@@ -129,11 +239,12 @@ export default function BookingPage() {
                         <button
                           key={t}
                           onClick={() => setSelectedTime(t)}
-                          className={`py-3 px-4 rounded-xl text-sm font-semibold transition-all ${
+                          className={cn(
+                            "py-3 px-4 rounded-xl text-sm font-semibold transition-all",
                             selectedTime === t
                               ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md shadow-pink-200"
                               : "bg-gray-50 text-gray-700 hover:bg-pink-50 hover:text-pink-600"
-                          }`}
+                          )}
                         >
                           {t}
                         </button>
@@ -145,41 +256,138 @@ export default function BookingPage() {
 
               {step === 4 && (
                 <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                  <h3 className="text-lg font-bold mb-5">Your Details</h3>
-                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-pink-100 space-y-4">
+                  <h3 className="text-lg font-bold mb-5">Confirm Details</h3>
+                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-pink-100 space-y-5">
+                    {/* Contact info */}
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="relative">
                         <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input placeholder="Full Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full pl-10 p-4 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" />
+                        <input placeholder="Full Name *" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full pl-10 p-4 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" />
                       </div>
                       <div className="relative">
                         <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input placeholder="Phone Number" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full pl-10 p-4 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" />
+                        <input placeholder="Phone Number *" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full pl-10 p-4 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" />
                       </div>
                     </div>
                     <div className="relative">
                       <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input placeholder="Email Address" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full pl-10 p-4 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" />
+                      <input placeholder="Email Address *" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full pl-10 p-4 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" />
                     </div>
+
+                    {/* Staff selection */}
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><User size={16} /> Select Staff</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <button onClick={() => setSelectedStaff("any")} className={cn(
+                          "p-3 rounded-xl border text-sm font-medium transition-all",
+                          selectedStaff === "any" ? "border-pink-400 bg-pink-50 text-pink-700" : "border-gray-200 hover:border-pink-200"
+                        )}>
+                          <Star size={14} className="inline mr-1" /> Any Staff
+                        </button>
+                        {staffList.map((st) => (
+                          <button key={st.id} onClick={() => setSelectedStaff(st.id)} className={cn(
+                            "p-3 rounded-xl border text-sm font-medium transition-all",
+                            selectedStaff === st.id ? "border-pink-400 bg-pink-50 text-pink-700" : "border-gray-200 hover:border-pink-200"
+                          )}>
+                            {st.name}
+                            <span className={cn("ml-1 w-2 h-2 rounded-full inline-block", st.active ? "bg-green-500" : "bg-red-400")} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Upload design */}
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><ImagePlus size={16} /> Upload Design Picture</label>
+                      <div className="border-2 border-dashed border-pink-200 rounded-xl p-4 text-center hover:bg-pink-50/50 transition-colors">
+                        {uploadedImage ? (
+                          <div className="relative inline-block">
+                            <img src={uploadedImage} alt="Design preview" className="w-32 h-32 object-cover rounded-xl" />
+                            <button onClick={removeImage} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center"><X size={14} /></button>
+                          </div>
+                        ) : (
+                          <label className="cursor-pointer flex flex-col items-center gap-2">
+                            <Upload size={24} className="text-pink-400" />
+                            <span className="text-sm text-gray-500">Click to upload a design picture</span>
+                            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Notes */}
                     <div className="relative">
                       <MessageSquare size={18} className="absolute left-3 top-4 text-gray-400" />
                       <textarea placeholder="Special requests or notes..." value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full pl-10 p-4 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none min-h-[100px] resize-y" />
                     </div>
+
+                    {/* Promo code */}
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><Tag size={16} /> Promotion Code</label>
+                      <div className="flex gap-2">
+                        <input placeholder="Enter promo code (e.g. NAIL20)" value={formData.promoCode} onChange={(e) => setFormData({ ...formData, promoCode: e.target.value })} className="flex-1 p-3 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none text-sm" />
+                        <button onClick={applyPromo} className="btn-primary px-5">Apply</button>
+                      </div>
+                      {promoError && <p className="text-red-500 text-xs mt-1">{promoError}</p>}
+                      {discount > 0 && <p className="text-green-600 text-xs mt-1">Discount applied: -£{discount}</p>}
+                    </div>
+
+                    {/* Medical checkboxes */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-gray-700 flex items-center gap-2"><Stethoscope size={16} /> Health Confirmation</p>
+                      <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-100 hover:bg-pink-50/30 cursor-pointer">
+                        <input type="checkbox" checked={formData.healthConfirmed} onChange={(e) => setFormData({ ...formData, healthConfirmed: e.target.checked })} className="mt-1 w-5 h-5 rounded border-pink-300 text-pink-600 focus:ring-pink-500" />
+                        <span className="text-sm text-gray-600">I confirm I am not experiencing any health conditions that would affect this service</span>
+                      </label>
+                      <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-100 hover:bg-pink-50/30 cursor-pointer">
+                        <input type="checkbox" checked={formData.allergiesConfirmed} onChange={(e) => setFormData({ ...formData, allergiesConfirmed: e.target.checked })} className="mt-1 w-5 h-5 rounded border-pink-300 text-pink-600 focus:ring-pink-500" />
+                        <span className="text-sm text-gray-600">I confirm I do not have allergies to cosmetics or chemicals</span>
+                      </label>
+                    </div>
+
+                    {/* Terms */}
+                    <label className="flex items-start gap-3 p-3 rounded-xl border border-pink-100 bg-pink-50/30 cursor-pointer">
+                      <input type="checkbox" checked={formData.termsAccepted} onChange={(e) => setFormData({ ...formData, termsAccepted: e.target.checked })} className="mt-1 w-5 h-5 rounded border-pink-300 text-pink-600 focus:ring-pink-500" required />
+                      <span className="text-sm text-gray-600">I agree to the <Link href="/terms" className="text-pink-600 underline">Terms & Conditions</Link>, <Link href="/privacy" className="text-pink-600 underline">Privacy Policy</Link>, and consent to the treatment.</span>
+                    </label>
                   </div>
 
-                  {/* Summary */}
+                  {/* Booking Summary */}
                   <div className="mt-6 bg-gradient-to-r from-pink-50 to-rose-50 rounded-2xl p-6 border border-pink-100">
-                    <h4 className="font-bold text-gray-900 mb-3">Booking Summary</h4>
+                    <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><ShieldCheck size={18} /> Booking Summary</h4>
                     <div className="space-y-2 text-sm">
                       <p className="flex justify-between"><span className="text-gray-500">Service:</span> <span className="font-medium">{service?.name}</span></p>
-                      <p className="flex justify-between"><span className="text-gray-500">Price:</span> <span className="font-bold text-pink-600">{service?.price}</span></p>
+                      <p className="flex justify-between">
+                        <span className="text-gray-500">Price:</span>
+                        <span className="font-bold text-pink-600">
+                          {discount > 0 ? (
+                            <>
+                              <span className="line-through text-gray-400 text-xs mr-2">£{basePrice}</span>
+                              £{finalPrice}
+                            </>
+                          ) : (
+                            `£${basePrice}`
+                          )}
+                        </span>
+                      </p>
+                      {discount > 0 && <p className="flex justify-between"><span className="text-gray-500">Discount:</span> <span className="text-green-600 font-bold">-£{discount}</span></p>}
                       <p className="flex justify-between"><span className="text-gray-500">Date:</span> <span className="font-medium">{selectedDate}</span></p>
                       <p className="flex justify-between"><span className="text-gray-500">Time:</span> <span className="font-medium">{selectedTime}</span></p>
+                      <p className="flex justify-between"><span className="text-gray-500">Staff:</span> <span className="font-medium">{selectedStaff === "any" ? "Any Staff" : staffList.find(s => s.id === selectedStaff)?.name}</span></p>
                     </div>
                   </div>
 
-                  <button className="w-full mt-6 btn-primary py-4 text-lg font-bold">
-                    Confirm Booking
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!step4Valid || loading}
+                    className={cn(
+                      "w-full mt-6 py-4 text-lg font-bold rounded-2xl transition-all",
+                      step4Valid && !loading
+                        ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    )}
+                  >
+                    {loading ? "Processing..." : "Confirm Booking"}
                   </button>
                 </motion.div>
               )}
@@ -196,7 +404,10 @@ export default function BookingPage() {
                 <button
                   onClick={handleNext}
                   disabled={!canProceed}
-                  className={`btn-primary flex-1 ${!canProceed ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className={cn(
+                    "btn-primary flex-1",
+                    !canProceed && "opacity-50 cursor-not-allowed"
+                  )}
                 >
                   Next <ChevronRight size={18} className="ml-2" />
                 </button>

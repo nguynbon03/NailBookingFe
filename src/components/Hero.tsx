@@ -12,11 +12,17 @@ const marqueeImages = [
   "/images/gallery-4.jpg",
   "/images/gallery-5.jpg",
   "/images/gallery-6.jpg",
+  "/images/gallery-7.jpg",
+  "/images/gallery-8.jpg",
+  "/images/gallery-9.jpg",
+  "/images/gallery-10.jpg",
 ];
 
 export default function Hero() {
+  const allImages = [...marqueeImages, ...marqueeImages, ...marqueeImages, ...marqueeImages];
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-hero pt-16">
+    <section className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-gradient-hero pt-16">
       {/* Decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-pink-200/30 rounded-full blur-3xl animate-float" />
@@ -121,26 +127,6 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Scrolling Nail Images Marquee */}
-      <div className="absolute bottom-0 left-0 w-full overflow-hidden py-6 pointer-events-none z-20">
-        <div className="flex animate-marquee gap-4 w-max">
-          {[...marqueeImages, ...marqueeImages, ...marqueeImages].map((src, i) => (
-            <div
-              key={i}
-              className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden flex-shrink-0 shadow-lg border-2 border-white"
-            >
-              <Image
-                src={src}
-                alt="Nail art"
-                fill
-                className="object-cover"
-                sizes="128px"
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Scroll indicator */}
       <motion.div
         animate={{ y: [0, 10, 0] }}
@@ -151,20 +137,6 @@ export default function Hero() {
           <div className="w-1.5 h-3 bg-pink-400 rounded-full" />
         </div>
       </motion.div>
-
-      <style jsx>{`
-        @keyframes marquee {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-33.33%);
-          }
-        }
-        .animate-marquee {
-          animation: marquee 30s linear infinite;
-        }
-      `}</style>
     </section>
   );
 }
