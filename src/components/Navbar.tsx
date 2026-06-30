@@ -48,9 +48,6 @@ export default function Navbar() {
           <button onClick={logout} className="flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 transition-all">
             <LogOut size={16} />Logout
           </button>
-          <span className="hidden xl:inline-flex px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold max-w-[140px] truncate">
-            {user.name}
-          </span>
         </>
       ) : !loading ? (
         <>

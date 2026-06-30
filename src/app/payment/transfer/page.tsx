@@ -20,6 +20,8 @@ export default function TransferPaymentPage() {
   const [error, setError] = useState("");
   const [result, setResult] = useState<any | null>(null);
   const [left, setLeft] = useState(0);
+  const [claiming, setClaiming] = useState(false);
+  const [claimMessage, setClaimMessage] = useState("");
 
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get("token") || "";
@@ -51,6 +53,21 @@ export default function TransferPaymentPage() {
   const reference = result?.reference || booking?.paymentReference || (booking?.id ? `NL-${booking.id.slice(-8).toUpperCase()}` : "");
   const services = useMemo(() => (booking?.services || []).map((item: any) => item.service?.name).filter(Boolean).join(", "), [booking]);
   const copy = async (value: string) => { try { await navigator.clipboard.writeText(value); } catch {} };
+  const markTransferred = async () => {
+    const token = new URLSearchParams(window.location.search).get("token") || "";
+    if (!token || claiming || left <= 0) return;
+    setClaiming(true);
+    setClaimMessage("");
+    try {
+      const data = await api.payments.claimTransfer(token);
+      setResult((current: any) => ({ ...(current || {}), booking: data.booking || current?.booking }));
+      setClaimMessage("Transfer submitted. The shop will verify the bank account and confirm the job for the held staff.");
+    } catch (err: any) {
+      setClaimMessage(err.message || "Could not submit transfer confirmation.");
+    } finally {
+      setClaiming(false);
+    }
+  };
 
   return (
     <>
@@ -105,6 +122,15 @@ export default function TransferPaymentPage() {
                 {bank.accountNumber && <p><span className="text-gray-400">Account number:</span> <button onClick={() => copy(bank.accountNumber)} className="font-black underline">{bank.accountNumber}</button></p>}
                 <p><span className="text-gray-400">Transfer reference:</span> <button onClick={() => copy(reference)} className="font-black underline">{reference}</button></p>
                 <p className="text-xs text-gray-300">{bank.instructions}</p>
+              </div>
+
+              <div className="rounded-3xl border border-pink-100 bg-gradient-to-r from-pink-50 to-rose-50 p-5">
+                <h3 className="font-black text-gray-900 mb-2">After you transfer</h3>
+                <p className="text-sm text-gray-600 mb-4">Tap the button below after sending the bank transfer. This notifies the shop and keeps the held staff attached to this booking. The booking becomes confirmed only after the shop verifies the money arrived.</p>
+                <button onClick={markTransferred} disabled={claiming || left <= 0} className="w-full rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 py-4 font-black text-white shadow-lg shadow-pink-100 disabled:bg-gray-200 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400">
+                  {claiming ? "Submitting..." : "I have sent the bank transfer"}
+                </button>
+                {claimMessage && <p className="mt-3 text-sm font-semibold text-pink-700">{claimMessage}</p>}
               </div>
 
               {left <= 0 && <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4 text-sm text-amber-800">The 3-minute lock has expired. Do not transfer until you create a new lock or contact the shop.</div>}

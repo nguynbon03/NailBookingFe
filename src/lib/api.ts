@@ -12,8 +12,13 @@ export async function fetchAPI(path: string, options: RequestInit = {}) {
   }
   const res = await fetch(url, { ...options, headers });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const err = await res.json().catch(() => ({ error: "Request failed" }));
+      throw new Error(err.error || err.message || `HTTP ${res.status}`);
+    }
+    const text = await res.text().catch(() => "");
+    throw new Error(text && text.length < 180 ? text : `Request failed (${res.status})`);
   }
   return res.json();
 }
@@ -50,12 +55,14 @@ export const api = {
   },
   payments: {
     hold: (token: string) => fetchAPI("/api/payments/transfer/hold", { method: "POST", body: JSON.stringify({ token }) }),
+    claimTransfer: (token: string, note?: string) => fetchAPI("/api/payments/transfer/claim", { method: "POST", body: JSON.stringify({ token, note }) }),
   },
   bookings: {
     create: (data: any) => fetchAPI("/api/bookings", { method: "POST", body: JSON.stringify(data) }),
     list: () => fetchAPI("/api/bookings"),
     my: () => fetchAPI("/api/bookings?mine=1"),
     verify: (token: string) => fetchAPI("/api/bookings/verify", { method: "POST", body: JSON.stringify({ token }) }),
+    requestCancel: (id: string, reason: string) => fetchAPI("/api/bookings/cancel-request", { method: "POST", body: JSON.stringify({ id, reason }) }),
     updateStatus: (id: string, status: string, staffId?: string | null) => fetchAPI("/api/bookings", { method: "PUT", body: JSON.stringify({ id, status, staffId }) }),
   },
   staff: {
@@ -97,6 +104,7 @@ export const api = {
     deletePromoCode: (id: string) => fetchAPI("/api/admin/promo-codes", { method: "DELETE", body: JSON.stringify({ id }) }),
     accounts: () => fetchAPI("/api/admin/accounts"),
     resetPassword: (id: string, newPassword: string) => fetchAPI("/api/admin/accounts", { method: "PUT", body: JSON.stringify({ id, newPassword }) }),
+    deleteAccount: (id: string) => fetchAPI("/api/admin/accounts", { method: "DELETE", body: JSON.stringify({ id }) }),
     leaves: () => fetchAPI("/api/staff/leave?scope=all"),
     reviewLeave: (id: string, status: string, managerNote?: string) => fetchAPI("/api/staff/leave", { method: "PUT", body: JSON.stringify({ id, status, managerNote }) }),
   },

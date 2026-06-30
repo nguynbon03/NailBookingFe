@@ -57,6 +57,7 @@ export default function BookingPage() {
   const [submitted, setSubmitted] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<any | null>(null);
   const [verificationInfo, setVerificationInfo] = useState<any | null>(null);
+  const [notificationDelivery, setNotificationDelivery] = useState<any | null>(null);
   const [promoError, setPromoError] = useState("");
 
   useEffect(() => {
@@ -87,7 +88,7 @@ export default function BookingPage() {
       name: current.name || user.name || "",
       phone: current.phone || user.phone || "",
       email: user.email || current.email,
-      emailConfirm: current.emailConfirm || user.email || "",
+      emailConfirm: current.emailConfirm,
     }));
   }, [authLoading, user?.id, user?.email, user?.name, user?.phone]);
 
@@ -177,6 +178,7 @@ export default function BookingPage() {
       });
       setCreatedBooking(result.booking || null);
       setVerificationInfo(result.verification || null);
+      setNotificationDelivery(result.notificationDelivery || null);
       setSubmitted(true);
     } catch (e: any) {
       alert(e.message || "Booking failed");
@@ -215,6 +217,8 @@ export default function BookingPage() {
 
   if (submitted) {
     const reference = verificationInfo?.reference || bookingReference(createdBooking?.id);
+    const emailSent = Number(notificationDelivery?.email?.sent || 0) > 0;
+    const emailProblem = notificationDelivery?.email?.error || notificationDelivery?.email?.status;
     return (
       <>
         <Navbar />
@@ -224,9 +228,17 @@ export default function BookingPage() {
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white mx-auto mb-5 shadow-lg shadow-pink-200">
                 <Mail size={38} />
               </div>
-              <h1 className="text-3xl font-black text-gray-900 mb-3">Check Your Email</h1>
-              <p className="text-gray-600 mb-2">Thank you, {formData.name}. Your booking request has been received.</p>
-              <p className="text-sm text-pink-600 font-bold mb-5">We sent a secure bank-transfer link to {formData.email}. Open it within 3 minutes to lock one available staff member for this time slot, then transfer with reference {reference}. Admin will confirm payment before the job appears on staff schedule.</p>
+              <h1 className="text-3xl font-black text-gray-900 mb-3">Booking Request Saved</h1>
+              <p className="text-gray-600 mb-2 break-words">Thank you, <span className="font-bold text-gray-900">{formData.name}</span>. Your booking request has been received.</p>
+              {emailSent ? (
+                <p className="text-sm text-pink-600 font-bold mb-5 break-words">We sent a secure bank-transfer link to <span className="underline decoration-pink-200">{formData.email}</span>. Open it within 3 minutes to lock one available staff member for this time slot, then transfer with reference {reference}. Admin will confirm payment before the job appears on staff schedule.</p>
+              ) : (
+                <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left text-sm text-amber-800">
+                  <p className="font-black">Email has not been sent yet.</p>
+                  <p className="mt-1 break-words">Your booking is saved in Admin as <span className="font-bold">Awaiting transfer</span>, but SMTP email delivery is not configured/successful yet. Admin can still see this booking and send the transfer link manually until SMTP is enabled.</p>
+                  {emailProblem ? <p className="mt-2 text-xs break-words opacity-80">Mail status: {String(emailProblem)}</p> : null}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
                 <div className="rounded-2xl bg-gray-50 p-4">
@@ -329,18 +341,18 @@ export default function BookingPage() {
 
               {step === 2 && (
                 <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                  <h3 className="text-lg font-bold mb-5">Select a Date</h3>
-                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-pink-100">
-                    <div className="flex items-center gap-2 mb-4 text-pink-600">
-                      <CalendarDays size={20} />
-                      <span className="font-semibold">Choose your preferred date</span>
+                  <h3 className="text-xl sm:text-2xl font-black mb-5 text-gray-900">Select a Date</h3>
+                  <div className="bg-white rounded-3xl p-5 sm:p-7 shadow-sm border border-pink-100">
+                    <div className="flex items-center gap-3 mb-4 text-pink-600">
+                      <CalendarDays size={26} className="shrink-0" />
+                      <span className="text-lg sm:text-xl font-black">Choose your preferred date</span>
                     </div>
                     <input
                       type="date"
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
                       min={new Date().toISOString().split("T")[0]}
-                      className="w-full p-4 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 focus:border-pink-400 outline-none transition-all text-gray-700"
+                      className="w-full min-h-16 px-5 py-4 rounded-2xl border-2 border-pink-200 bg-white focus:ring-4 focus:ring-pink-100 focus:border-pink-400 outline-none transition-all text-xl sm:text-2xl font-black text-gray-900 placeholder:text-gray-400"
                     />
                   </div>
                 </motion.div>
@@ -422,20 +434,25 @@ export default function BookingPage() {
                         <input placeholder="Phone Number *" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full pl-10 p-4 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" />
                       </div>
                     </div>
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div>
-                        <div className="relative">
-                          <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                          <input placeholder="Account Email *" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className={cn("w-full pl-10 p-4 rounded-xl border focus:ring-2 outline-none", formData.email && (!emailValid || !emailMatchesAccount) ? "border-red-300 focus:ring-red-200" : "border-pink-200 focus:ring-pink-300")} />
+                    <div className="rounded-3xl border border-pink-100 bg-gradient-to-r from-pink-50/80 to-rose-50/70 p-4 sm:p-5 space-y-4">
+                      <div className="grid grid-cols-[48px_1fr] gap-3 sm:gap-4 items-start">
+                        <div className="h-12 w-12 shrink-0 rounded-2xl bg-white text-pink-600 shadow-sm flex items-center justify-center"><Mail size={22} /></div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-black uppercase tracking-wide text-pink-500">Verified account email</p>
+                          <p className="mt-1 break-all text-base sm:text-lg font-black leading-snug text-gray-900">{user?.email}</p>
+                          <p className="mt-1 text-sm text-gray-500">The secure transfer link is sent only to this signed-in verified account.</p>
                         </div>
-                        <p className={cn("text-xs mt-1.5", formData.email && (!emailValid || !emailMatchesAccount) ? "text-red-500" : "text-gray-400")}>Must match your signed-in account: {user?.email}</p>
                       </div>
-                      <div>
-                        <div className="relative">
-                          <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                          <input placeholder="Confirm Account Email *" type="email" value={formData.emailConfirm} onChange={(e) => setFormData({ ...formData, emailConfirm: e.target.value })} className={cn("w-full pl-10 p-4 rounded-xl border focus:ring-2 outline-none", formData.emailConfirm && !emailConfirmMatchesAccount ? "border-red-300 focus:ring-red-200" : "border-pink-200 focus:ring-pink-300")} />
-                        </div>
-                        <p className={cn("text-xs mt-1.5", formData.emailConfirm && !emailConfirmMatchesAccount ? "text-red-500" : "text-gray-400")}>Re-type the same verified account email before we send the transfer link.</p>
+                      <div className="rounded-2xl bg-white/80 p-3 sm:p-4 border border-pink-100">
+                        <label className="mb-2 block text-xs font-black uppercase tracking-wide text-gray-500">Re-type the same email</label>
+                        <input
+                          placeholder={user?.email || "Type your account email again"}
+                          type="email"
+                          value={formData.emailConfirm}
+                          onChange={(e) => setFormData({ ...formData, emailConfirm: e.target.value })}
+                          className={cn("w-full min-h-14 px-4 rounded-xl border bg-white focus:ring-4 outline-none text-base sm:text-lg font-semibold", formData.emailConfirm && !emailConfirmMatchesAccount ? "border-red-300 focus:ring-red-100" : "border-pink-200 focus:ring-pink-100")}
+                        />
+                        <p className={cn("text-sm mt-2 break-words", formData.emailConfirm && !emailConfirmMatchesAccount ? "text-red-500 font-semibold" : "text-gray-500")}>Must match your signed-in account: <span className="font-bold break-all">{user?.email}</span></p>
                       </div>
                     </div>
 

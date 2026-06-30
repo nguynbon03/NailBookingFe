@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { KeyRound, Mail, Phone, Search, ShieldCheck, UserRound, UsersRound } from "lucide-react";
+import { KeyRound, Mail, Phone, Search, ShieldCheck, Trash2, UserRound, UsersRound } from "lucide-react";
 
 type Account = {
   id: string;
@@ -91,6 +91,27 @@ export default function AdminAccounts() {
     }
   };
 
+  const deleteAccount = async (account: Account) => {
+    if (user?.role !== "ADMIN") {
+      setError("Only ADMIN can delete accounts");
+      return;
+    }
+    if (account.id === user?.id) {
+      setError("You cannot delete your own account");
+      return;
+    }
+    if (!window.confirm(`Delete account ${account.email}? Existing bookings are kept but detached from this login.`)) return;
+    setError("");
+    setMessage("");
+    try {
+      await api.admin.deleteAccount(account.id);
+      setAccounts((items) => items.filter((item) => item.id !== account.id));
+      setMessage(`Deleted account ${account.email}`);
+    } catch (err: any) {
+      setError(err.message || "Failed to delete account");
+    }
+  };
+
   return (
     <div className="pb-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-5">
@@ -137,6 +158,7 @@ export default function AdminAccounts() {
                     <th className="px-3 py-2 font-black">Linked Staff</th>
                     <th className="px-3 py-2 font-black">Created</th>
                     <th className="px-3 py-2 font-black w-72">Reset password</th>
+                    <th className="px-3 py-2 font-black w-16">Delete</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -152,6 +174,9 @@ export default function AdminAccounts() {
                           <input type="text" value={passwords[account.id] || ""} onChange={(e) => setPasswords({ ...passwords, [account.id]: e.target.value })} placeholder={canResetAccount(account) ? "New password" : "Admin only"} disabled={!canResetAccount(account)} className="min-w-0 flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-pink-300 disabled:bg-gray-100 disabled:text-gray-400" />
                           <button onClick={() => resetPassword(account)} disabled={resettingId === account.id || !canResetAccount(account)} className="px-3 py-2 rounded-xl bg-gray-900 text-white text-xs font-bold whitespace-nowrap disabled:bg-gray-300">{resettingId === account.id ? "..." : "Reset"}</button>
                         </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <button onClick={() => deleteAccount(account)} disabled={user?.role !== "ADMIN" || account.id === user?.id} className="h-9 w-9 rounded-xl bg-red-50 text-red-600 inline-flex items-center justify-center hover:bg-red-100 disabled:bg-gray-100 disabled:text-gray-300" title="Delete account"><Trash2 size={15} /></button>
                       </td>
                     </tr>
                   ))}
