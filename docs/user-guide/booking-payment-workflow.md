@@ -110,8 +110,9 @@ Khi tiền đã vào:
 4. Hệ thống ghi paymentConfirmedAt và paymentConfirmedBy.
 5. Revenue bắt đầu được tính.
 6. Job mới hiện ở Staff Portal.
+7. Hệ thống tự bắn notification cho toàn bộ Staff: "New paid job available".
 
-Đây là điểm chống thất thu quan trọng nhất.
+Đây là điểm chống thất thu quan trọng nhất. Staff chỉ thấy/nhận job sau bước này.
 
 ### Bước 6 — Staff nhận job
 
@@ -142,7 +143,33 @@ Nếu khách không đến:
 
 No-show sau khi đã thanh toán vẫn giữ revenue để tránh thất thu.
 
-### Bước 8 — Hủy booking
+### Bước 8 — Staff xin nghỉ / báo phép nghỉ
+
+Staff không tự xóa lịch rảnh bằng miệng hoặc nhắn riêng nữa. Staff phải tạo leave ticket trong Staff Portal.
+
+Staff làm như sau:
+
+1. Vào Staff Portal.
+2. Mở Day Off / Leave Ticket.
+3. Chọn From date và To date.
+4. Nhập reason, ví dụ: sick, family matter, holiday request.
+5. Bấm Submit leave ticket.
+
+Manager/Admin làm như sau:
+
+1. Vào Admin > Leave.
+2. Xem ticket PENDING.
+3. Nếu đồng ý, bấm Approve.
+4. Nếu không đồng ý, bấm Reject và ghi note nếu cần.
+
+Khi leave được approve:
+
+- Staff nhận notification leave approved.
+- Ngày nghỉ đã duyệt tự chặn availability của staff.
+- Customer booking slot không còn tính staff đó là người rảnh.
+- Nếu staff đang có paid confirmed booking trong ngày nghỉ, Manager nhận cảnh báo để đổi người.
+
+### Bước 9 — Hủy booking
 
 Chỉ Admin/Manager được hủy với khách.
 
@@ -155,7 +182,7 @@ Khi hủy:
 
 Staff không dùng nút Cancel với khách nữa.
 
-### Bước 9 — Archive booking cũ
+### Bước 10 — Archive booking cũ
 
 Booking cancelled/completed/no-show có thể archive để màn hình đỡ loạn.
 
@@ -171,6 +198,8 @@ Dùng Include archived nếu cần kiểm tra lại lịch sử.
 | Awaiting transfer | Khách đã xác thực email, chờ chuyển khoản | Admin/Manager |
 | Paid / Confirmed | Đã nhận tiền, revenue được tính | Staff nhận job |
 | Staff assigned | Staff đã nhận việc | Staff |
+| Leave pending | Staff đã xin nghỉ, chờ duyệt | Manager/Admin |
+| Leave approved | Ngày nghỉ đã duyệt, staff bị ẩn khỏi availability ngày đó | Hệ thống + Manager |
 | Completed | Đã làm xong | Không cần xử lý |
 | No-show | Khách không đến sau khi đã xác nhận | Manager theo dõi |
 | Cancelled | Shop hủy booking, có reason | Admin/Manager |
@@ -187,8 +216,10 @@ Manager làm theo thứ tự:
 5. Chỉ khi tiền vào mới bấm Payment received → Confirm.
 6. Kiểm tra Open Paid Jobs trong Staff Portal hoặc Admin để đảm bảo staff đã nhận việc.
 7. Nếu staff reject, xem reason và giao lại cho người khác.
-8. Cuối ngày xem Completed / No-show / Cancelled và revenue ngày đó.
-9. Archive booking cũ để màn hình sạch.
+8. Vào Admin > Leave để duyệt/từ chối đơn nghỉ của staff.
+9. Nếu leave được approve mà có booking trùng, reassign booking ngay.
+10. Cuối ngày xem Completed / No-show / Cancelled và revenue ngày đó.
+11. Archive booking cũ để màn hình sạch.
 
 ## Những điều không được làm
 
@@ -197,3 +228,5 @@ Manager làm theo thứ tự:
 - Không tính revenue từ booking chưa thanh toán.
 - Không để email chưa xác thực hiện cho Staff.
 - Không hard-delete booking nếu còn cần đối soát doanh thu.
+- Không nhận nghỉ bằng miệng/tin nhắn riêng rồi quên cập nhật hệ thống.
+- Không approve leave mà bỏ qua booking đã assign trùng ngày.

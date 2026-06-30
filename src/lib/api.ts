@@ -61,6 +61,9 @@ export const api = {
     createAvailability: (data: any) => fetchAPI("/api/staff/availability", { method: "POST", body: JSON.stringify(data) }),
     updateAvailability: (data: any) => fetchAPI("/api/staff/availability", { method: "PUT", body: JSON.stringify(data) }),
     deleteAvailability: (id: string) => fetchAPI("/api/staff/availability", { method: "DELETE", body: JSON.stringify({ id }) }),
+    leaves: () => fetchAPI("/api/staff/leave"),
+    requestLeave: (data: any) => fetchAPI("/api/staff/leave", { method: "POST", body: JSON.stringify(data) }),
+    cancelLeave: (id: string) => fetchAPI("/api/staff/leave", { method: "DELETE", body: JSON.stringify({ id }) }),
   },
   admin: {
     stats: () => fetchAPI("/api/admin/stats"),
@@ -89,5 +92,7 @@ export const api = {
     deletePromoCode: (id: string) => fetchAPI("/api/admin/promo-codes", { method: "DELETE", body: JSON.stringify({ id }) }),
     accounts: () => fetchAPI("/api/admin/accounts"),
     resetPassword: (id: string, newPassword: string) => fetchAPI("/api/admin/accounts", { method: "PUT", body: JSON.stringify({ id, newPassword }) }),
+    leaves: () => fetchAPI("/api/staff/leave?scope=all"),
+    reviewLeave: (id: string, status: string, managerNote?: string) => fetchAPI("/api/staff/leave", { method: "PUT", body: JSON.stringify({ id, status, managerNote }) }),
   },
 };

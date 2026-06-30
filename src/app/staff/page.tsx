@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
-import { CalendarDays, CheckCircle, Clock, ClipboardList, LogOut, Bell, Plus, Trash, UserCheck, AlertTriangle, XCircle } from "lucide-react";
+import { CalendarDays, CheckCircle, Clock, ClipboardList, LogOut, Bell, Plus, Trash, UserCheck, AlertTriangle, XCircle, Send, Plane } from "lucide-react";
 import { formatPrice } from "@/lib/service-utils";
 
 type Booking = {
@@ -29,10 +29,17 @@ type Booking = {
 
 type Notification = { id: string; title: string; message: string; read: boolean; createdAt: string; type: string };
 type Availability = { id: string; dayOfWeek: number | null; date: string | null; startTime: string; endTime: string; active: boolean };
+type LeaveRequest = { id: string; startDate: string; endDate: string; daysCount: number; reason: string; status: string; managerNote?: string | null; reviewedBy?: string | null; reviewedAt?: string | null; createdAt: string };
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const rejectReasons = ["Staff have problem", "Time not available", "Service skill mismatch", "Too busy", "Other"];
 const emptyAvailability = { dayOfWeek: "1", date: "", startTime: "09:00", endTime: "18:00", active: true };
+
+function todayISO() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+}
 
 function bookingServices(booking: Booking) {
   return (booking.services || []).map((item) => item.service?.name).filter(Boolean).join(", ") || "Service";
@@ -45,6 +52,8 @@ function statusClass(status: string) {
     COMPLETED: "bg-blue-100 text-blue-700",
     CANCELLED: "bg-red-100 text-red-700",
     NO_SHOW: "bg-gray-100 text-gray-600",
+    APPROVED: "bg-emerald-100 text-emerald-700",
+    REJECTED: "bg-red-100 text-red-700",
   };
   return `px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wide ${map[status] || "bg-gray-100 text-gray-600"}`;
 }
@@ -60,7 +69,9 @@ export default function StaffPortalPage() {
   const [myBookings, setMyBookings] = useState<Booking[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [availability, setAvailability] = useState<Availability[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [form, setForm] = useState(emptyAvailability);
+  const [leaveForm, setLeaveForm] = useState({ startDate: todayISO(), endDate: todayISO(), reason: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rejectTarget, setRejectTarget] = useState<Booking | null>(null);
@@ -68,6 +79,7 @@ export default function StaffPortalPage() {
   const [rejectOther, setRejectOther] = useState("");
 
   const allowed = user && ["STAFF", "ADMIN", "MANAGER"].includes(user.role);
+  const pendingLeaves = leaveRequests.filter((item) => item.status === "PENDING").length;
 
   const refresh = () => {
     setError("");
@@ -75,12 +87,14 @@ export default function StaffPortalPage() {
       api.staff.dashboard(),
       api.notifications.list("staff"),
       api.staff.availability().catch(() => ({ availability: [] })),
+      api.staff.leaves().catch(() => ({ leaveRequests: [] })),
     ])
-      .then(([dashboard, notificationData, availabilityData]: any[]) => {
+      .then(([dashboard, notificationData, availabilityData, leaveData]: any[]) => {
         setAvailableBookings(dashboard.availableBookings || []);
         setMyBookings(dashboard.myBookings || []);
         setNotifications(notificationData.notifications || []);
         setAvailability(availabilityData.availability || []);
+        setLeaveRequests(leaveData.leaveRequests || []);
       })
       .catch((err: any) => setError(err.message || "Could not load staff portal"))
       .finally(() => setLoading(false));
@@ -146,6 +160,29 @@ export default function StaffPortalPage() {
     refresh();
   };
 
+  const requestLeave = async () => {
+    try {
+      if (!leaveForm.startDate || !leaveForm.endDate || !leaveForm.reason.trim()) {
+        setError("Please enter leave dates and reason");
+        return;
+      }
+      await api.staff.requestLeave(leaveForm);
+      setLeaveForm({ startDate: todayISO(), endDate: todayISO(), reason: "" });
+      refresh();
+    } catch (err: any) {
+      setError(err.message || "Could not request leave");
+    }
+  };
+
+  const cancelLeave = async (id: string) => {
+    try {
+      await api.staff.cancelLeave(id);
+      refresh();
+    } catch (err: any) {
+      setError(err.message || "Could not cancel leave request");
+    }
+  };
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading staff portal...</div>;
   }
@@ -158,25 +195,26 @@ export default function StaffPortalPage() {
           <div className="flex items-start justify-between gap-3 mb-4 sm:mb-8">
             <div className="min-w-0">
               <p className="text-pink-500 font-black text-xs sm:text-sm uppercase tracking-wide mb-1">Staff Portal</p>
-              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">Jobs & Schedule</h1>
-              <p className="hidden sm:block text-gray-500 mt-2">Staff only accepts internal jobs. Owner/Manager handles customer confirmation, payment and cancellation.</p>
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">Jobs, Notifications & Leave</h1>
+              <p className="hidden sm:block text-gray-500 mt-2">Paid jobs are automated into staff notifications. Leave requests block your approved days from availability.</p>
             </div>
             <button onClick={logout} className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold inline-flex items-center gap-1.5 shrink-0"><LogOut size={15} />Logout</button>
           </div>
 
           <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
-            <b>Workflow rule:</b> jobs shown here are already payment-confirmed by Owner/Manager. Pressing <b>Accept job</b> only assigns the staff member; it does not send a new confirmation to the customer. If you cannot take a job, use <b>Cannot take job</b> and enter a reason so Manager can reassign it.
+            <b>Automation rule:</b> once Owner/Manager confirms payment, all staff receive a notification and the job appears below. Accept only assigns the job internally. If you cannot take it, submit a reason so Manager can reassign it without cancelling the paid customer booking.
           </div>
 
           {error && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>}
 
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-8">
             <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><ClipboardList className="text-pink-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{availableBookings.length}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Open paid jobs</p></div>
             <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><CalendarDays className="text-emerald-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{myBookings.length}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Mine</p></div>
             <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><Bell className="text-amber-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{notifications.filter((n) => !n.read).length}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Unread</p></div>
+            <div className="bg-white rounded-2xl p-3 sm:p-5 border border-pink-100 shadow-sm"><Plane className="text-sky-500 mb-1 sm:mb-2" size={18} /><p className="text-2xl sm:text-3xl font-black leading-none">{pendingLeaves}</p><p className="text-[11px] sm:text-sm text-gray-500 mt-1">Leave pending</p></div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] gap-4 sm:gap-6">
             <div className="space-y-4 sm:space-y-6 min-w-0">
               <section className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-pink-100 shadow-sm">
                 <div className="flex items-center justify-between mb-4 sm:mb-5">
@@ -223,6 +261,27 @@ export default function StaffPortalPage() {
             </div>
 
             <aside className="space-y-4 sm:space-y-6 min-w-0">
+              <section className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-sky-100 shadow-sm">
+                <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-2">Day Off / Leave Ticket</h2>
+                <p className="text-xs text-gray-500 mb-4">Submit leave before the day off. Approved leave automatically hides your free hours for those dates.</p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div><label className="block text-sm font-semibold text-gray-700 mb-1">From</label><input type="date" className="w-full min-h-11 p-3 rounded-xl border border-sky-200" value={leaveForm.startDate} onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value, endDate: leaveForm.endDate || e.target.value })} /></div>
+                  <div><label className="block text-sm font-semibold text-gray-700 mb-1">To</label><input type="date" className="w-full min-h-11 p-3 rounded-xl border border-sky-200" value={leaveForm.endDate} onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })} /></div>
+                </div>
+                <textarea className="w-full min-h-24 p-3 rounded-xl border border-sky-200 text-sm mb-3" placeholder="Reason: today sick, family matter, holiday request..." value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} />
+                <button onClick={requestLeave} className="btn-primary w-full min-h-11 inline-flex justify-center items-center gap-2"><Send size={16} />Submit leave ticket</button>
+                <div className="mt-4 space-y-2 max-h-[260px] overflow-auto pr-1">
+                  {leaveRequests.length === 0 ? <p className="text-sm text-gray-400">No leave requests yet.</p> : leaveRequests.map((item) => (
+                    <div key={item.id} className="rounded-2xl border border-gray-100 p-3 text-sm">
+                      <div className="flex items-center justify-between gap-2"><b className="text-gray-900">{shortDate(item.startDate)} → {shortDate(item.endDate)}</b><span className={statusClass(item.status)}>{item.status}</span></div>
+                      <p className="text-xs text-gray-500 mt-1">{item.daysCount} day(s) · {item.reason}</p>
+                      {item.managerNote && <p className="text-xs text-gray-500 mt-1">Manager note: {item.managerNote}</p>}
+                      {item.status === "PENDING" && <button onClick={() => cancelLeave(item.id)} className="mt-2 text-xs font-bold text-red-600">Cancel request</button>}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
               <section className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-pink-100 shadow-sm">
                 <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-4">My Free Hours</h2>
                 <div className="space-y-3 mb-4">

@@ -131,6 +131,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3">
           <Link href="/admin/services" className="btn-primary text-center">+ Add Service</Link>
           <Link href="/admin/staff" className="btn-secondary text-center">+ Add Staff</Link>
+          <Link href="/admin/leave-requests" className="btn-secondary text-center">Leave Requests</Link>
           <Link href="/admin/promo-codes" className="btn-secondary text-center">Promo Codes</Link>
           <Link href="/admin/accounts" className="btn-secondary text-center">Accounts</Link>
           <Link href="/admin/bookings" className="btn-secondary text-center">View Bookings</Link>
