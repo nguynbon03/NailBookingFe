@@ -24,6 +24,7 @@ const timeSlots = [
 ];
 
 type Staff = { id: string; name: string; email: string; role: string; active: boolean; avatar?: string | null };
+type Slot = { time: string; availableStaffCount: number; staffIds: string[] };
 
 export default function BookingPage() {
   const [step, setStep] = useState(1);
@@ -36,6 +37,9 @@ export default function BookingPage() {
   });
   const [selectedStaff, setSelectedStaff] = useState("any");
   const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsError, setSlotsError] = useState("");
   const [services, setServices] = useState<PublicService[]>(fallbackServices());
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [discount, setDiscount] = useState(0);
@@ -67,6 +71,25 @@ export default function BookingPage() {
   const service = services.find((s) => s.id === selectedService || s.name === selectedService);
   const basePrice = service ? service.price : 0;
   const finalPrice = Math.max(0, basePrice - discount);
+
+  useEffect(() => {
+    setSelectedTime("");
+    setSlotsError("");
+    setAvailableSlots([]);
+    if (!selectedDate || !service?.id) return;
+
+    setSlotsLoading(true);
+    api.availability.slots(selectedDate, service.id, selectedStaff)
+      .then((d: any) => {
+        setAvailableSlots(d.slots || []);
+        if (!(d.slots || []).length) setSlotsError("No staff is free for this date. Please choose another date or staff.");
+      })
+      .catch((err: any) => {
+        setAvailableSlots([]);
+        setSlotsError(err.message || "Could not load available slots");
+      })
+      .finally(() => setSlotsLoading(false));
+  }, [selectedDate, selectedStaff, service?.id]);
 
   const handleNext = () => { if (step < 4) setStep(step + 1); };
   const handleBack = () => { if (step > 1) setStep(step - 1); };
@@ -241,24 +264,60 @@ export default function BookingPage() {
 
               {step === 3 && (
                 <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                  <h3 className="text-lg font-bold mb-5">Select a Time</h3>
-                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-pink-100">
-                    <p className="text-sm text-gray-500 mb-4">Available slots for {selectedDate}</p>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                      {timeSlots.map((t) => (
-                        <button
-                          key={t}
-                          onClick={() => setSelectedTime(t)}
-                          className={cn(
-                            "py-3 px-4 rounded-xl text-sm font-semibold transition-all",
-                            selectedTime === t
-                              ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md shadow-pink-200"
-                              : "bg-gray-50 text-gray-700 hover:bg-pink-50 hover:text-pink-600"
-                          )}
-                        >
-                          {t}
+                  <h3 className="text-lg font-bold mb-5">Select Staff & Available Time</h3>
+                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-pink-100 space-y-6">
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><User size={16} /> Staff availability</label>
+                      <p className="text-xs text-gray-400 mb-3">Only staff with a free working slot will show available times.</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <button onClick={() => setSelectedStaff("any")} className={cn(
+                          "p-3 rounded-xl border text-sm font-medium transition-all",
+                          selectedStaff === "any" ? "border-pink-400 bg-pink-50 text-pink-700" : "border-gray-200 hover:border-pink-200"
+                        )}>
+                          <Star size={14} className="inline mr-1" /> Any Staff
                         </button>
-                      ))}
+                        {staffList.map((st) => (
+                          <button key={st.id} onClick={() => setSelectedStaff(st.id)} className={cn(
+                            "p-3 rounded-xl border text-sm font-medium transition-all flex items-center gap-2 text-left",
+                            selectedStaff === st.id ? "border-pink-400 bg-pink-50 text-pink-700" : "border-gray-200 hover:border-pink-200"
+                          )}>
+                            <span className="w-8 h-8 rounded-full bg-pink-50 overflow-hidden flex items-center justify-center text-pink-400 shrink-0">
+                              {st.avatar ? <img src={st.avatar} alt={st.name} className="w-full h-full object-cover" /> : st.name.charAt(0)}
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block truncate">{st.name}</span>
+                              <span className={cn("mt-1 w-2 h-2 rounded-full inline-block", st.active ? "bg-green-500" : "bg-red-400")} />
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-gray-500 mb-4">Available slots for {selectedDate}</p>
+                      {slotsLoading ? (
+                        <div className="rounded-xl bg-gray-50 p-6 text-center text-gray-400">Checking staff availability...</div>
+                      ) : slotsError ? (
+                        <div className="rounded-xl bg-amber-50 p-4 text-amber-700 text-sm">{slotsError}</div>
+                      ) : (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                          {availableSlots.map((slot) => (
+                            <button
+                              key={slot.time}
+                              onClick={() => setSelectedTime(slot.time)}
+                              className={cn(
+                                "py-3 px-4 rounded-xl text-sm font-semibold transition-all",
+                                selectedTime === slot.time
+                                  ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md shadow-pink-200"
+                                  : "bg-gray-50 text-gray-700 hover:bg-pink-50 hover:text-pink-600"
+                              )}
+                            >
+                              {slot.time}
+                              <span className="block text-[10px] opacity-70">{slot.availableStaffCount} free</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -284,31 +343,9 @@ export default function BookingPage() {
                       <input placeholder="Email Address *" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full pl-10 p-4 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" />
                     </div>
 
-                    {/* Staff selection */}
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><User size={16} /> Select Staff</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        <button onClick={() => setSelectedStaff("any")} className={cn(
-                          "p-3 rounded-xl border text-sm font-medium transition-all",
-                          selectedStaff === "any" ? "border-pink-400 bg-pink-50 text-pink-700" : "border-gray-200 hover:border-pink-200"
-                        )}>
-                          <Star size={14} className="inline mr-1" /> Any Staff
-                        </button>
-                        {staffList.map((st) => (
-                          <button key={st.id} onClick={() => setSelectedStaff(st.id)} className={cn(
-                            "p-3 rounded-xl border text-sm font-medium transition-all flex items-center gap-2 text-left",
-                            selectedStaff === st.id ? "border-pink-400 bg-pink-50 text-pink-700" : "border-gray-200 hover:border-pink-200"
-                          )}>
-                            <span className="w-8 h-8 rounded-full bg-pink-50 overflow-hidden flex items-center justify-center text-pink-400 shrink-0">
-                              {st.avatar ? <img src={st.avatar} alt={st.name} className="w-full h-full object-cover" /> : st.name.charAt(0)}
-                            </span>
-                            <span className="min-w-0">
-                              <span className="block truncate">{st.name}</span>
-                              <span className={cn("mt-1 w-2 h-2 rounded-full inline-block", st.active ? "bg-green-500" : "bg-red-400")} />
-                            </span>
-                          </button>
-                        ))}
-                      </div>
+                    {/* Staff summary */}
+                    <div className="rounded-xl bg-pink-50/60 border border-pink-100 p-4 text-sm text-gray-700">
+                      <span className="font-semibold">Staff:</span> {selectedStaff === "any" ? "Any available staff" : staffList.find((st) => st.id === selectedStaff)?.name || "Selected staff"} · <span className="font-semibold">Time:</span> {selectedTime}
                     </div>
 
                     {/* Upload design */}

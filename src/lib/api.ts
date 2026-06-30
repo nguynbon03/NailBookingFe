@@ -4,7 +4,7 @@ export async function fetchAPI(path: string, options: RequestInit = {}) {
   const url = `${API_BASE}${path}`;
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const headers: Record<string, string> = {
-    ...(token ? { Authorization: ["Be", "arer ", token].join("") } : {}),
+    ...(token ? { Authorization: "Bearer " + token } : {}),
     ...((options.headers as Record<string, string>) || {}),
   };
   if (!(options.body instanceof FormData)) {
@@ -29,6 +29,18 @@ export const api = {
   services: {
     list: () => fetchAPI("/api/services").catch(() => ({ services: [] })),
   },
+  availability: {
+    slots: (date: string, serviceId?: string, staffId?: string) => {
+      const params = new URLSearchParams({ date });
+      if (serviceId) params.set("serviceId", serviceId);
+      if (staffId && staffId !== "any") params.set("staffId", staffId);
+      return fetchAPI(`/api/availability?${params.toString()}`);
+    },
+  },
+  notifications: {
+    list: (audience?: string) => fetchAPI(`/api/notifications${audience ? `?audience=${audience}` : ""}`),
+    markAll: (audience: string) => fetchAPI("/api/notifications", { method: "PUT", body: JSON.stringify({ audience, read: true }) }),
+  },
   promoCodes: {
     validate: (code: string, subtotal: number) =>
       fetchAPI("/api/promo-codes/validate", { method: "POST", body: JSON.stringify({ code, subtotal }) }),
@@ -37,15 +49,21 @@ export const api = {
     create: (data: any) => fetchAPI("/api/bookings", { method: "POST", body: JSON.stringify(data) }),
     list: () => fetchAPI("/api/bookings"),
     my: () => fetchAPI("/api/bookings?mine=1"),
-    updateStatus: (id: string, status: string) => fetchAPI("/api/bookings", { method: "PUT", body: JSON.stringify({ id, status }) }),
+    updateStatus: (id: string, status: string, staffId?: string | null) => fetchAPI("/api/bookings", { method: "PUT", body: JSON.stringify({ id, status, staffId }) }),
   },
   staff: {
     list: () => fetchAPI("/api/staff").catch(() => ({ staff: [] })),
+    dashboard: () => fetchAPI("/api/staff/bookings"),
+    action: (id: string, action: string) => fetchAPI("/api/staff/bookings", { method: "PUT", body: JSON.stringify({ id, action }) }),
+    availability: () => fetchAPI("/api/staff/availability"),
+    createAvailability: (data: any) => fetchAPI("/api/staff/availability", { method: "POST", body: JSON.stringify(data) }),
+    updateAvailability: (data: any) => fetchAPI("/api/staff/availability", { method: "PUT", body: JSON.stringify(data) }),
+    deleteAvailability: (id: string) => fetchAPI("/api/staff/availability", { method: "DELETE", body: JSON.stringify({ id }) }),
   },
   admin: {
     stats: () => fetchAPI("/api/admin/stats"),
     bookings: () => fetchAPI("/api/bookings"),
-    updateBookingStatus: (id: string, status: string) => fetchAPI("/api/bookings", { method: "PUT", body: JSON.stringify({ id, status }) }),
+    updateBookingStatus: (id: string, status: string, staffId?: string | null) => fetchAPI("/api/bookings", { method: "PUT", body: JSON.stringify({ id, status, staffId }) }),
     services: () => fetchAPI("/api/admin/services"),
     createService: (data: any) => fetchAPI("/api/admin/services", { method: "POST", body: JSON.stringify(data) }),
     updateService: (data: any) => fetchAPI("/api/admin/services", { method: "PUT", body: JSON.stringify(data) }),
@@ -58,5 +76,7 @@ export const api = {
     createPromoCode: (data: any) => fetchAPI("/api/admin/promo-codes", { method: "POST", body: JSON.stringify(data) }),
     updatePromoCode: (data: any) => fetchAPI("/api/admin/promo-codes", { method: "PUT", body: JSON.stringify(data) }),
     deletePromoCode: (id: string) => fetchAPI("/api/admin/promo-codes", { method: "DELETE", body: JSON.stringify({ id }) }),
+    accounts: () => fetchAPI("/api/admin/accounts"),
+    resetPassword: (id: string, newPassword: string) => fetchAPI("/api/admin/accounts", { method: "PUT", body: JSON.stringify({ id, newPassword }) }),
   },
 };

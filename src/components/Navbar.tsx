@@ -12,13 +12,14 @@ const navLinks = [
   { label: "Contact", href: "/#contact" },
 ];
 
-const adminRoles = new Set(["ADMIN", "MANAGER", "STAFF"]);
+const adminRoles = new Set(["ADMIN", "MANAGER"]);
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { user, loading, logout } = useAuth();
   const isAdmin = adminRoles.has(user?.role || "");
+  const isStaff = user?.role === "STAFF";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -36,6 +37,11 @@ export default function Navbar() {
           {isAdmin && (
             <Link href="/admin" className="flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium text-pink-700 bg-pink-50 hover:bg-pink-100 transition-all">
               <Settings size={16} />Admin
+            </Link>
+          )}
+          {isStaff && (
+            <Link href="/staff" className="flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-all">
+              <Settings size={16} />Staff
             </Link>
           )}
           <button onClick={logout} className="flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 transition-all">
@@ -106,6 +112,7 @@ export default function Navbar() {
             <>
               <Link href="/my-bookings" className="block px-4 py-3 rounded-xl text-gray-700 hover:text-pink-600 hover:bg-pink-50 font-medium transition-all" onClick={() => setMobileOpen(false)}>My Bookings</Link>
               {isAdmin && <Link href="/admin" className="block px-4 py-3 rounded-xl text-pink-700 bg-pink-50 font-medium transition-all" onClick={() => setMobileOpen(false)}>Admin Dashboard</Link>}
+              {isStaff && <Link href="/staff" className="block px-4 py-3 rounded-xl text-emerald-700 bg-emerald-50 font-medium transition-all" onClick={() => setMobileOpen(false)}>Staff Portal</Link>}
               <button onClick={() => { setMobileOpen(false); logout(); }} className="block w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 font-medium transition-all">Logout</button>
             </>
           ) : !loading ? (

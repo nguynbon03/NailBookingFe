@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Plus, Pencil, Trash, CheckCircle, XCircle, ImagePlus, X, Mail, Phone } from "lucide-react";
 
-const emptyForm = { name: "", email: "", phone: "", role: "THERAPIST", bio: "", avatar: "", active: true };
+const emptyForm = { name: "", email: "", phone: "", role: "THERAPIST", bio: "", avatar: "", active: true, loginPassword: "" };
 
 type Staff = { id: string; name: string; email: string; phone?: string | null; role: string; bio?: string | null; avatar?: string | null; active: boolean; createdAt: string };
 
@@ -59,7 +59,7 @@ export default function AdminStaff() {
 
   const edit = (s: Staff) => {
     setEditing(s);
-    setForm({ name: s.name, email: s.email, phone: s.phone || "", role: s.role, bio: s.bio || "", avatar: s.avatar || "", active: s.active });
+    setForm({ name: s.name, email: s.email, phone: s.phone || "", role: s.role, bio: s.bio || "", avatar: s.avatar || "", active: s.active, loginPassword: "" });
     setShowForm(true);
     setError("");
   };
@@ -71,12 +71,12 @@ export default function AdminStaff() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 sm:mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Staff Management</h2>
-          <p className="text-sm text-gray-500 mt-1">Photos and active status sync to public booking staff selection.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Staff Management</h2>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Photos and active status sync to public booking staff selection.</p>
         </div>
-        <button onClick={() => { setShowForm(true); setEditing(null); setForm(emptyForm); setError(""); }} className="btn-primary flex items-center gap-2">
+        <button onClick={() => { setShowForm(true); setEditing(null); setForm(emptyForm); setError(""); }} className="btn-primary min-h-11 flex items-center justify-center gap-2">
           <Plus size={18} /> Add Staff
         </button>
       </div>
@@ -84,7 +84,7 @@ export default function AdminStaff() {
       {error && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>}
 
       {showForm && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 mb-6 shadow-sm">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 mb-4 sm:mb-6 shadow-sm">
           <div className="flex items-start justify-between gap-4 mb-4">
             <h3 className="font-bold text-lg">{editing ? "Edit Staff" : "New Staff"}</h3>
             <button onClick={() => setShowForm(false)} className="p-2 rounded-full hover:bg-gray-100"><X size={18} /></button>
@@ -104,6 +104,7 @@ export default function AdminStaff() {
               <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" placeholder={editing ? "Reset login password (optional)" : "Login password (default staff123)"} type="text" value={form.loginPassword} onChange={(e) => setForm({ ...form, loginPassword: e.target.value })} />
               <select className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
                 <option value="THERAPIST">Therapist</option>
                 <option value="MANICURIST">Manicurist</option>
@@ -118,9 +119,9 @@ export default function AdminStaff() {
               </label>
             </div>
           </div>
-          <div className="flex gap-3 mt-5">
-            <button onClick={save} disabled={saving} className="btn-primary">{saving ? "Saving..." : "Save Staff"}</button>
-            <button onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
+          <div className="flex flex-col sm:flex-row gap-3 mt-5">
+            <button onClick={save} disabled={saving} className="btn-primary min-h-11">{saving ? "Saving..." : "Save Staff"}</button>
+            <button onClick={() => setShowForm(false)} className="btn-secondary min-h-11">Cancel</button>
           </div>
         </div>
       )}

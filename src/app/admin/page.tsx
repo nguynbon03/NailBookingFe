@@ -30,6 +30,7 @@ function money(value: number) {
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; read: boolean; createdAt: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<"daily" | "monthly" | "yearly">("daily");
 
@@ -55,30 +56,30 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 sm:mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
-          <p className="text-sm text-gray-500 mt-1">Bank-style overview: users, bookings, promo usage, and revenue by day/month/year.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h2>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Mobile-first overview: users, bookings, promo usage, and revenue.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-600">{user?.name}</span>
-          <span className="px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-xs font-bold uppercase">{user?.role}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs sm:text-sm text-gray-600 truncate">{user?.name}</span>
+          <span className="px-2.5 py-1 bg-pink-100 text-pink-700 rounded-full text-[10px] sm:text-xs font-bold uppercase">{user?.role}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mb-8">
+      <div className="grid grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5 mb-4 sm:mb-8">
         {cards.map((c, i) => (
-          <motion.div key={c.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${c.color} flex items-center justify-center text-white mb-4`}><c.icon size={22} /></div>
-            <p className="text-3xl font-bold text-gray-900">{loading ? "..." : c.value}</p>
-            <p className="text-sm font-semibold text-gray-700 mt-1">{c.label}</p>
-            <p className="text-xs text-gray-400 mt-1">{c.sub}</p>
+          <motion.div key={c.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white rounded-2xl p-3 sm:p-6 shadow-sm border border-gray-100">
+            <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${c.color} flex items-center justify-center text-white mb-2 sm:mb-4`}><c.icon size={18} /></div>
+            <p className="text-xl sm:text-3xl font-black text-gray-900 truncate">{loading ? "..." : c.value}</p>
+            <p className="text-xs sm:text-sm font-semibold text-gray-700 mt-1">{c.label}</p>
+            <p className="hidden sm:block text-xs text-gray-400 mt-1">{c.sub}</p>
           </motion.div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6 mb-8">
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4 sm:gap-6 mb-4 sm:mb-8">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
             <div>
               <h3 className="font-bold text-gray-900">Revenue Trend</h3>
@@ -92,7 +93,7 @@ export default function AdminDashboard() {
           </div>
           <div className="space-y-3">
             {series.map((item) => (
-              <div key={item.label} className="grid grid-cols-[92px_1fr_90px] items-center gap-3 text-sm">
+              <div key={item.label} className="grid grid-cols-[68px_1fr_72px] sm:grid-cols-[92px_1fr_90px] items-center gap-2 sm:gap-3 text-xs sm:text-sm">
                 <span className="text-gray-500 font-medium">{item.label}</span>
                 <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
                   <div className="h-full rounded-full bg-gradient-to-r from-pink-500 to-rose-500" style={{ width: `${Math.max(2, (item.revenue / maxRevenue) * 100)}%` }} />
@@ -103,7 +104,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-gray-900">Promo Usage</h3>
             <Link href="/admin/promo-codes" className="text-xs text-pink-600 font-bold">Manage</Link>
@@ -125,13 +126,14 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
-        <h3 className="font-bold mb-4 text-gray-900">Quick Actions</h3>
-        <div className="flex flex-wrap gap-3">
-          <Link href="/admin/services" className="btn-primary">+ Add Service</Link>
-          <Link href="/admin/staff" className="btn-secondary">+ Add Staff</Link>
-          <Link href="/admin/promo-codes" className="btn-secondary">Promo Codes</Link>
-          <Link href="/admin/bookings" className="btn-secondary">View Bookings</Link>
+      <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 mb-6 sm:mb-8">
+        <h3 className="font-bold mb-3 sm:mb-4 text-gray-900">Quick Actions</h3>
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3">
+          <Link href="/admin/services" className="btn-primary text-center">+ Add Service</Link>
+          <Link href="/admin/staff" className="btn-secondary text-center">+ Add Staff</Link>
+          <Link href="/admin/promo-codes" className="btn-secondary text-center">Promo Codes</Link>
+          <Link href="/admin/accounts" className="btn-secondary text-center">Accounts</Link>
+          <Link href="/admin/bookings" className="btn-secondary text-center">View Bookings</Link>
         </div>
       </div>
     </div>

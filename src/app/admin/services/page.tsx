@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
-import { Plus, Pencil, Trash, Clock, ImagePlus, X, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Pencil, Trash, Clock, ImagePlus, X, CheckCircle, XCircle, Search } from "lucide-react";
 import { formatPrice } from "@/lib/service-utils";
 
 const emptyForm = { name: "", price: "", duration: "", category: "extensions_hands", description: "", image: "", active: true };
@@ -25,6 +25,7 @@ export default function AdminServices() {
   const [form, setForm] = useState(emptyForm);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
 
   const refresh = () => {
     api.admin.services()
@@ -34,6 +35,12 @@ export default function AdminServices() {
   };
 
   useEffect(() => { refresh(); }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return services;
+    return services.filter((s) => [s.name, s.category, s.description || ""].join(" ").toLowerCase().includes(q));
+  }, [services, query]);
 
   const save = async () => {
     setError("");
@@ -77,37 +84,42 @@ export default function AdminServices() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
+    <div className="pb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 sm:mb-5">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Services</h2>
-          <p className="text-sm text-gray-500 mt-1">No duplicate service names. Images sync to public booking and homepage.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Services</h2>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Compact food-style inventory grid: small square images, more services visible.</p>
         </div>
-        <button onClick={() => { setShowForm(true); setEditing(null); setForm(emptyForm); setError(""); }} className="btn-primary flex items-center gap-2">
+        <button onClick={() => { setShowForm(true); setEditing(null); setForm(emptyForm); setError(""); }} className="btn-primary min-h-11 flex items-center justify-center gap-2">
           <Plus size={18} /> Add Service
         </button>
+      </div>
+
+      <div className="relative mb-4">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search service name/category..." className="w-full pl-9 pr-3 py-3 rounded-2xl bg-white border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-pink-300" />
       </div>
 
       {error && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>}
 
       {showForm && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 mb-6 shadow-sm">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 mb-4 sm:mb-6 shadow-sm">
           <div className="flex items-start justify-between gap-4 mb-4">
             <h3 className="font-bold text-lg">{editing ? "Edit Service" : "New Service"}</h3>
             <button onClick={() => setShowForm(false)} className="p-2 rounded-full hover:bg-gray-100"><X size={18} /></button>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[128px_1fr] gap-5">
             <div>
-              <div className="w-full aspect-square rounded-2xl overflow-hidden bg-pink-50 border border-pink-100 flex items-center justify-center text-pink-400 mb-3">
-                {form.image ? <img src={form.image} alt="Service preview" className="w-full h-full object-cover" /> : <ImagePlus size={36} />}
+              <div className="w-28 h-28 lg:w-32 lg:h-32 rounded-2xl overflow-hidden bg-pink-50 border border-pink-100 flex items-center justify-center text-pink-400 mb-3 mx-auto lg:mx-0">
+                {form.image ? <img src={form.image} alt="Service preview" className="w-full h-full object-cover" /> : <ImagePlus size={30} />}
               </div>
-              <label className="btn-secondary w-full text-sm cursor-pointer">
+              <label className="btn-secondary w-full text-sm cursor-pointer text-center">
                 Upload Image
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => onImageFile(e.target.files?.[0])} />
               </label>
               {form.image && <button onClick={() => setForm({ ...form, image: "" })} className="mt-2 text-xs text-red-500">Remove image</button>}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               <select className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                 <option value="extensions_hands">Nail Extensions (Hands)</option>
@@ -121,15 +133,15 @@ export default function AdminServices() {
               <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="Price (£)" type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
               <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none" placeholder="Duration (minutes)" type="number" min="1" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
               <input className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none md:col-span-2" placeholder="Image URL or upload above" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} />
-              <textarea className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none md:col-span-2 min-h-[90px]" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <textarea className="p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none md:col-span-2 min-h-[76px]" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} className="w-5 h-5 rounded border-gray-300 text-pink-600 focus:ring-pink-500" /> Active on website
               </label>
             </div>
           </div>
-          <div className="flex gap-3 mt-5">
-            <button onClick={save} disabled={saving} className="btn-primary">{saving ? "Saving..." : "Save Service"}</button>
-            <button onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
+          <div className="flex flex-col sm:flex-row gap-3 mt-5">
+            <button onClick={save} disabled={saving} className="btn-primary min-h-11">{saving ? "Saving..." : "Save Service"}</button>
+            <button onClick={() => setShowForm(false)} className="btn-secondary min-h-11">Cancel</button>
           </div>
         </div>
       )}
@@ -137,27 +149,27 @@ export default function AdminServices() {
       {loading ? (
         <div className="text-center py-12 text-gray-400">Loading...</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {services.map((s) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-3">
+          {filtered.map((s) => (
             <div key={s.id} className="bg-white rounded-2xl border border-gray-100 hover:shadow-sm transition-shadow overflow-hidden">
-              <div className="h-36 bg-pink-50 flex items-center justify-center text-pink-300">
-                {s.image ? <img src={s.image} alt={s.name} className="w-full h-full object-cover" /> : <ImagePlus size={34} />}
+              <div className="aspect-square bg-pink-50 flex items-center justify-center text-pink-300">
+                {s.image ? <img src={s.image} alt={s.name} className="w-full h-full object-cover" /> : <ImagePlus size={28} />}
               </div>
-              <div className="p-5">
-                <div className="flex justify-between items-start gap-3 mb-2">
-                  <div className="font-bold text-gray-900 leading-tight">{s.name}</div>
+              <div className="p-2.5 sm:p-3">
+                <div className="flex justify-between items-start gap-2 mb-1.5">
+                  <div className="font-black text-gray-900 leading-tight text-sm line-clamp-2 min-h-[36px]">{s.name}</div>
                   <div className="flex gap-1 shrink-0">
-                    <button onClick={() => edit(s)} className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600"><Pencil size={14} /></button>
-                    <button onClick={() => remove(s.id)} className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-500"><Trash size={14} /></button>
+                    <button onClick={() => edit(s)} className="h-8 w-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 inline-flex items-center justify-center"><Pencil size={13} /></button>
+                    <button onClick={() => remove(s.id)} className="h-8 w-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 inline-flex items-center justify-center"><Trash size={13} /></button>
                   </div>
                 </div>
-                <div className="text-sm text-gray-500">{s.category}</div>
-                <div className="flex items-center justify-between gap-3 mt-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-pink-600 font-bold">{formatPrice(s.price)}</span>
-                    <span className="flex items-center gap-1 text-gray-400 text-xs"><Clock size={12} />{s.duration}m</span>
-                  </div>
-                  {s.active ? <span className="text-green-600 text-xs flex items-center gap-1"><CheckCircle size={13} />Live</span> : <span className="text-gray-400 text-xs flex items-center gap-1"><XCircle size={13} />Hidden</span>}
+                <div className="text-[11px] text-gray-400 truncate">{s.category}</div>
+                <div className="flex items-center justify-between gap-2 mt-2">
+                  <span className="text-pink-600 font-black text-sm">{formatPrice(s.price)}</span>
+                  <span className="flex items-center gap-1 text-gray-400 text-[11px]"><Clock size={11} />{s.duration}m</span>
+                </div>
+                <div className="mt-2">
+                  {s.active ? <span className="text-green-600 text-[11px] flex items-center gap-1 font-bold"><CheckCircle size={12} />Live</span> : <span className="text-gray-400 text-[11px] flex items-center gap-1 font-bold"><XCircle size={12} />Hidden</span>}
                 </div>
               </div>
             </div>
