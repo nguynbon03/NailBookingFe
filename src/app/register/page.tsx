@@ -36,14 +36,14 @@ export default function RegisterPage() {
           <div className="text-center mb-6">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white mx-auto mb-4"><Sparkles size={28} /></div>
             <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
-            <p className="text-gray-500 text-sm mt-1">Verify your email once, then use the same email for online booking.</p>
+            <p className="text-gray-500 text-sm mt-1">Verify your email once. Email and phone are checked before the account is created.</p>
           </div>
           {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm">{error}</div>}
           {message && <div className="mb-4 p-3 bg-emerald-50 text-emerald-700 rounded-xl text-sm flex gap-2"><ShieldCheck size={18} className="shrink-0 mt-0.5" />{message}</div>}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative"><User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input value={data.name} onChange={e => setData({ ...data, name: e.target.value })} placeholder="Full Name" required className="w-full pl-10 p-3.5 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" /></div>
             <div className="relative"><Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="email" value={data.email} onChange={e => setData({ ...data, email: e.target.value })} placeholder="Email" required className="w-full pl-10 p-3.5 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" /></div>
-            <div className="relative"><Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input value={data.phone} onChange={e => setData({ ...data, phone: e.target.value })} placeholder="Phone" className="w-full pl-10 p-3.5 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" /></div>
+            <div className="relative"><Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="tel" inputMode="tel" value={data.phone} onChange={e => setData({ ...data, phone: e.target.value })} placeholder="Phone / SMS number" required className="w-full pl-10 p-3.5 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" /></div>
             <div className="relative"><Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="password" value={data.password} onChange={e => setData({ ...data, password: e.target.value })} placeholder="Password" required minLength={6} className="w-full pl-10 p-3.5 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" /></div>
             <button type="submit" disabled={loading} className="btn-primary w-full py-3.5">{loading ? "Creating..." : "Create Account"}</button>
           </form>
