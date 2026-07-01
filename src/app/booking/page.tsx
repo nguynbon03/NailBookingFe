@@ -511,7 +511,7 @@ export default function BookingPage() {
                       {otpMessage && <p className="text-emerald-700 text-xs font-semibold mt-1">{otpMessage}</p>}
                     </div>
 
-                                        {/* Contact info */}
+                    {/* Contact info */}
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="relative">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
@@ -545,24 +545,9 @@ export default function BookingPage() {
                         <p className={cn("text-sm mt-2 break-words", formData.emailConfirm && !emailConfirmMatchesAccount ? "text-red-500 font-semibold" : "text-gray-500")}>Must match your signed-in account: <span className="font-bold break-all">{user?.email}</span></p>
                       </div>
                     </div>
-                          <p className="mt-1 break-all text-base sm:text-lg font-black leading-snug text-gray-900">{user?.email}</p>
-                          <p className="mt-1 text-sm text-gray-500">This verified account is used for anti-spam protection, booking updates, and any deposit link if required.</p>
-                        </div>
-                      </div>
-                      <div className="rounded-2xl bg-white/80 p-3 sm:p-4 border border-pink-100">
-                        <label className="mb-2 block text-xs font-black uppercase tracking-wide text-gray-500">Re-type the same email</label>
-                        <input
-                          placeholder={user?.email || "Type your account email again"}
-                          type="email"
-                          value={formData.emailConfirm}
-                          onChange={(e) => setFormData({ ...formData, emailConfirm: e.target.value })}
-                          className={cn("w-full min-h-14 px-4 rounded-xl border bg-white focus:ring-4 outline-none text-base sm:text-lg font-semibold", formData.emailConfirm && !emailConfirmMatchesAccount ? "border-red-300 focus:ring-red-100" : "border-pink-200 focus:ring-pink-100")}
-                        />
-                        <p className={cn("text-sm mt-2 break-words", formData.emailConfirm && !emailConfirmMatchesAccount ? "text-red-500 font-semibold" : "text-gray-500")}>Must match your signed-in account: <span className="font-bold break-all">{user?.email}</span></p>
-                      </div>
-                    </div>
 
                     {/* Staff summary */}
+/* Staff summary */}
                     <div className="rounded-xl bg-pink-50/60 border border-pink-100 p-4 text-sm text-gray-700">
                       <span className="font-semibold">Staff:</span> {selectedStaff === "any" ? "Any available staff" : staffList.find((st) => st.id === selectedStaff)?.name || "Selected staff"} · <span className="font-semibold">Time:</span> {selectedTime}
                     </div>
