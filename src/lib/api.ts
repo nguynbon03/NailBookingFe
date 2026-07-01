@@ -148,3 +148,11 @@ export const api = {
     removeBlocklist: (id: string) => fetchAPI("/api/admin/protection", { method: "DELETE", body: JSON.stringify({ id }) }),
   },
 };
+
+// OTP for booking phone verification (anti-spam - only required at booking step)
+otp: {
+  send: (phone: string, channel: "auto" | "whatsapp" | "sms" = "auto") =>
+    fetchAPI("/api/otp/send", { method: "POST", body: JSON.stringify({ phone, channel }) }),
+  verify: (phone: string, otp: string) =>
+    fetchAPI("/api/otp/verify", { method: "POST", body: JSON.stringify({ phone, otp }) }),
+},

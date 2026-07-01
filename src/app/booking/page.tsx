@@ -58,7 +58,16 @@ export default function BookingPage() {
   const [createdBooking, setCreatedBooking] = useState<any | null>(null);
   const [verificationInfo, setVerificationInfo] = useState<any | null>(null);
   const [notificationDelivery, setNotificationDelivery] = useState<any | null>(null);
+    const [notificationDelivery, setNotificationDelivery] = useState<any | null>(null);
   const [promoError, setPromoError] = useState("");
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpChannel, setOtpChannel] = useState<"auto" | "whatsapp" | "sms">("auto");
+  const [otpError, setOtpError] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [otpMessage, setOtpMessage] = useState("");
 
   useEffect(() => {
     api.staff.list().then((d: any) => setStaffList(d.staff || [])).catch(() => {});
