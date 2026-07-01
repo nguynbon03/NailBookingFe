@@ -29,6 +29,11 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const googleHref = useMemo(() => googleStartUrl(), []);
+  const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED === "true";
+  const googleError = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("google_error") || "";
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setLoading(true);
@@ -53,11 +58,16 @@ export default function LoginPage() {
             <p className="text-gray-500 text-sm mt-1">Sign in before booking. Customer booking email must match this account.</p>
           </div>
           {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm">{error}</div>}
-          <a href={googleHref} className="mb-4 w-full rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-800 font-bold py-3.5 px-4 flex items-center justify-center gap-3 transition-colors shadow-sm">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-sm font-black text-blue-600">G</span>
-            Continue with Google
-          </a>
-          <div className="flex items-center gap-3 mb-4"><div className="h-px bg-gray-100 flex-1" /><span className="text-xs text-gray-400 font-bold">or email/password</span><div className="h-px bg-gray-100 flex-1" /></div>
+          {googleError && <div className="mb-4 p-3 bg-amber-50 text-amber-700 rounded-xl text-sm">{decodeURIComponent(googleError)}</div>}
+          {googleEnabled && (
+            <>
+              <a href={googleHref} className="mb-4 w-full rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-800 font-bold py-3.5 px-4 flex items-center justify-center gap-3 transition-colors shadow-sm">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-sm font-black text-blue-600">G</span>
+                Continue with Google
+              </a>
+              <div className="flex items-center gap-3 mb-4"><div className="h-px bg-gray-100 flex-1" /><span className="text-xs text-gray-400 font-bold">or username/email + password</span><div className="h-px bg-gray-100 flex-1" /></div>
+            </>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative"><Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="text" value={email} onChange={e => setEmail(e.target.value)} placeholder="Username or email" required className="w-full pl-10 p-3.5 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" /></div>
             <div className="relative"><Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" required className="w-full pl-10 p-3.5 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" /></div>
