@@ -26,7 +26,7 @@ function money(value: any) {
 
 function authHeaders() {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
-  return token ? { Authorization: String.fromCharCode(66, 101, 97, 114, 101, 114) + " " + token } : {};
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function downloadAdminFile(path: string, fallbackName: string) {
