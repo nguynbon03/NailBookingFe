@@ -1,7 +1,8 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 import { usePathname } from "next/navigation";
 import { TrendingUp, CalendarDays, Package, Users, Tags, UserCog, CalendarOff, ShieldCheck, Inbox, FileText, BarChart3, User as UserIcon, Home, RefreshCw } from "lucide-react";
 import Link from "next/link";
@@ -36,6 +37,7 @@ const DEPLOY_VERSION = "v2026-07-01-14:15"; // force visible version
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
+  const [ticketUnread, setTicketUnread] = useState(0);
 
   useEffect(() => {
     if (loading || typeof window === "undefined") return;
@@ -47,6 +49,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       window.location.href = user.role === "STAFF" ? "/staff" : "/";
     }
   }, [user, loading, pathname]);
+
+  useEffect(() => {
+    if (loading || !user || !adminRoles.has(user.role)) return;
+    const loadUnread = () => {
+      api.notifications.list("admin", 50, "tickets")
+        .then((data: any) => setTicketUnread(Number(data.unread || 0)))
+        .catch(() => {});
+    };
+    loadUnread();
+    const timer = window.setInterval(loadUnread, 10000);
+    return () => window.clearInterval(timer);
+  }, [loading, user?.id, user?.role]);
 
   if (loading) {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">Loading admin...</div>;
@@ -79,7 +93,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
           >
             <link.icon size={mobile ? 15 : 17} />
-            {link.label}
+            <span>{link.label}</span>
+            {link.href === "/admin/inbox" && ticketUnread > 0 && (
+              <span className={cn(
+                "ml-auto min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-black",
+                isActive ? "bg-white text-pink-600" : "bg-red-500 text-white"
+              )}>{ticketUnread}</span>
+            )}
           </Link>
         );
       })}

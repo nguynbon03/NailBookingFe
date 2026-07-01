@@ -118,6 +118,8 @@ export default function StaffPortalPage() {
       return;
     }
     refresh();
+    const timer = window.setInterval(refresh, 15000);
+    return () => window.clearInterval(timer);
   }, [authLoading, user?.id]);
 
   const runAction = async (id: string, action: string, reason?: string | null) => {
@@ -232,10 +234,10 @@ export default function StaffPortalPage() {
                   {availableBookings.map((booking) => (
                     <div key={booking.id} className="rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
                       <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1.5"><span className="font-black text-gray-900 truncate">{booking.customerName}</span><span className={statusClass(booking.status)}>Waiting staff</span></div>
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5"><span className="font-black text-gray-900 truncate">{booking.customerName}</span><span className={statusClass(booking.status)}>{booking.status === "CONFIRMED" ? "Replacement needed" : "Waiting staff"}</span></div>
                         <p className="text-sm text-gray-600 truncate">{bookingServices(booking)}</p>
                         <p className="text-xs text-gray-400 mt-1"><Clock size={12} className="inline mr-1" />{shortDate(booking.date)} {booking.time} · {formatPrice(booking.totalPrice)}</p>
-                        <p className="text-[11px] text-sky-600 font-bold mt-1">{staffRequestLabel(booking)}</p>{booking.paymentConfirmedAt && <p className="text-[11px] text-emerald-600 font-bold mt-1">Deposit confirmed by {booking.paymentConfirmedBy || "Manager"}</p>}
+                        <p className="text-[11px] text-sky-600 font-bold mt-1">{staffRequestLabel(booking)}</p>{booking.staffRejectionReason && <p className="text-[11px] text-orange-600 font-bold mt-1">Previous staff rejected: {booking.staffRejectionReason}</p>}{booking.paymentConfirmedAt && <p className="text-[11px] text-emerald-600 font-bold mt-1">Deposit confirmed by {booking.paymentConfirmedBy || "Manager"}</p>}
                       </div>
                       <button onClick={() => runAction(booking.id, "claim")} className="btn-primary w-full lg:w-auto min-h-11 inline-flex items-center justify-center gap-2"><UserCheck size={16} />Accept booking</button>
                     </div>

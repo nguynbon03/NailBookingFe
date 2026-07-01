@@ -27,6 +27,7 @@ function shortDate(value: string) {
 
 function typeClass(type: string) {
   if (type.includes("CANCEL")) return "bg-red-50 text-red-700 border-red-100";
+  if (type.includes("REJECT")) return "bg-orange-50 text-orange-700 border-orange-100";
   if (type.includes("LEAVE")) return "bg-sky-50 text-sky-700 border-sky-100";
   return "bg-pink-50 text-pink-700 border-pink-100";
 }
@@ -37,6 +38,10 @@ function isCancellationTicket(item: NotificationRow) {
 
 function isLeaveTicket(item: NotificationRow) {
   return item.type === "STAFF_LEAVE_REQUESTED" || item.type === "STAFF_LEAVE_CANCELLED";
+}
+
+function isStaffRejectedTicket(item: NotificationRow) {
+  return item.type === "STAFF_REJECTED_JOB";
 }
 
 export default function AdminInboxPage() {
@@ -62,7 +67,18 @@ export default function AdminInboxPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+    const timer = window.setInterval(() => {
+      api.notifications.list("admin", 100, TICKET_CATEGORY)
+        .then((data: any) => {
+          setItems(data.notifications || []);
+          setUnread(data.unread || 0);
+        })
+        .catch(() => {});
+    }, 10000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const selectedIds = useMemo(() => Object.entries(selected).filter(([, value]) => value).map(([id]) => id), [selected]);
   const allSelected = items.length > 0 && selectedIds.length === items.length;
@@ -152,6 +168,7 @@ export default function AdminInboxPage() {
   const stats = useMemo(() => ({
     cancel: items.filter(isCancellationTicket).length,
     leave: items.filter(isLeaveTicket).length,
+    rejected: items.filter(isStaffRejectedTicket).length,
     unread,
   }), [items, unread]);
 
@@ -161,7 +178,7 @@ export default function AdminInboxPage() {
         <div>
           <p className="text-pink-600 text-xs font-black uppercase tracking-wide">Admin ticket inbox</p>
           <h2 className="text-xl sm:text-2xl font-black text-gray-900 mt-1">Inbox</h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">Only customer cancellation tickets and staff leave tickets appear here. Admin/Manager can approve, reject, acknowledge, and clean tickets from one place.</p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Customer cancellations, staff leave, and staff rejection tickets appear here. This page auto-refreshes every 10 seconds so Admin/Manager can reassign staff or contact customers quickly.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={refresh} className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-bold inline-flex items-center gap-2"><RefreshCw size={16} />Refresh</button>
@@ -174,8 +191,9 @@ export default function AdminInboxPage() {
       {error && <div className="mb-4 rounded-xl bg-orange-50 text-orange-700 p-3 text-sm flex gap-2"><AlertTriangle size={17} className="shrink-0" />{error}</div>}
       {notice && <div className="mb-4 rounded-xl bg-emerald-50 text-emerald-700 p-3 text-sm font-bold">{notice}</div>}
 
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <div className="bg-white rounded-2xl border border-pink-100 p-3 sm:p-5"><p className="text-[11px] font-black text-pink-500 uppercase">Unread</p><p className="text-2xl font-black text-gray-900">{stats.unread}</p></div>
+        <div className="bg-white rounded-2xl border border-orange-100 p-3 sm:p-5"><p className="text-[11px] font-black text-orange-500 uppercase">Staff rejected</p><p className="text-2xl font-black text-gray-900">{stats.rejected}</p></div>
         <div className="bg-white rounded-2xl border border-red-100 p-3 sm:p-5"><p className="text-[11px] font-black text-red-500 uppercase">Cancel tickets</p><p className="text-2xl font-black text-gray-900">{stats.cancel}</p></div>
         <div className="bg-white rounded-2xl border border-sky-100 p-3 sm:p-5"><p className="text-[11px] font-black text-sky-500 uppercase">Leave tickets</p><p className="text-2xl font-black text-gray-900">{stats.leave}</p></div>
       </div>
@@ -211,6 +229,13 @@ export default function AdminInboxPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0 lg:justify-end">
+                  {item.type === "STAFF_REJECTED_JOB" && (
+                    <>
+                      {item.bookingId && <a href={`/admin/bookings?highlight=${item.bookingId}`} className="min-h-10 rounded-xl bg-orange-600 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1">Open booking</a>}
+                      <a href="/staff" className="min-h-10 rounded-xl bg-gray-900 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1">Find staff</a>
+                      <button disabled={busyId === item.id} onClick={() => runAction(item, "acknowledge")} className="min-h-10 rounded-xl bg-pink-600 px-3 text-white text-sm font-bold disabled:opacity-50">Acknowledge</button>
+                    </>
+                  )}
                   {item.type === "CUSTOMER_CANCEL_REQUEST" && (
                     <>
                       <button disabled={busyId === item.id} onClick={() => runAction(item, "approveCancellation")} className="min-h-10 rounded-xl bg-red-600 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"><CheckCircle2 size={15} />Approve cancel</button>
