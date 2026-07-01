@@ -64,6 +64,7 @@ export default function LoginPage() {
             <button type="submit" disabled={loading} className="btn-primary w-full py-3.5"><LogIn size={18} className="mr-2 inline" />{loading ? "Signing in..." : "Sign In"}</button>
           </form>
           <p className="text-center text-sm text-gray-500 mt-4">Don't have an account? <Link href="/register" className="text-pink-600 font-semibold hover:underline">Register</Link></p>
+          <p className="text-center text-xs text-gray-400 mt-3">Test phone OTP: <Link href="/verify-phone" className="text-pink-600 font-semibold hover:underline">WhatsApp/SMS verify</Link></p>
         </div>
       </motion.div>
     </main></>

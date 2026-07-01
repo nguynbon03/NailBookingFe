@@ -62,6 +62,12 @@ export const api = {
     hold: (token: string) => fetchAPI("/api/payments/transfer/hold", { method: "POST", body: JSON.stringify({ token }) }),
     claimTransfer: (token: string, note?: string) => fetchAPI("/api/payments/transfer/claim", { method: "POST", body: JSON.stringify({ token, note }) }),
   },
+  otp: {
+    send: (phone: string, channel: "auto" | "whatsapp" | "sms" = "auto") =>
+      fetchAPI("/api/otp/send", { method: "POST", body: JSON.stringify({ phone, channel }) }),
+    verify: (phone: string, otp: string) =>
+      fetchAPI("/api/otp/verify", { method: "POST", body: JSON.stringify({ phone, otp }) }),
+  },
   bookings: {
     create: (data: any) => fetchAPI("/api/bookings", { method: "POST", body: JSON.stringify(data) }),
     list: () => fetchAPI("/api/bookings"),

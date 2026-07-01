@@ -48,6 +48,7 @@ export default function RegisterPage() {
             <button type="submit" disabled={loading} className="btn-primary w-full py-3.5">{loading ? "Creating..." : "Create Account"}</button>
           </form>
           <p className="text-center text-sm text-gray-500 mt-4">Already verified? <Link href="/login" className="text-pink-600 font-semibold hover:underline">Sign In</Link></p>
+          <p className="text-center text-xs text-gray-400 mt-3">Need phone OTP? <Link href="/verify-phone" className="text-pink-600 font-semibold hover:underline">Verify by WhatsApp/SMS</Link></p>
         </div>
       </motion.div>
     </main></>
