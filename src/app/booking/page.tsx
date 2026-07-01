@@ -41,6 +41,7 @@ export default function BookingPage() {
   const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
@@ -106,8 +107,9 @@ export default function BookingPage() {
   }, [authLoading, user?.id, user?.email, user?.name, user?.phone]);
 
   const service = services.find((s) => s.id === selectedService || s.name === selectedService);
-  const selectedServiceObjects = services.filter((s) => selectedServices.includes(s.id) || selectedServices.includes(s.name) || (selectedService && (s.id === selectedService || s.name === selectedService)));
-  const basePrice = selectedServiceObjects.reduce((sum, s) => sum + Number(s.price || 0), 0);
+  const selectedServiceObjects = services.filter((s) => selectedServices.includes(s.id) || selectedServices.includes(s.name));
+  const selectedAddonObjects = services.filter((s) => selectedAddons.includes(s.id) || selectedAddons.includes(s.name));
+  const basePrice = [...selectedServiceObjects, ...selectedAddonObjects].reduce((sum, s) => sum + Number(s.price || 0), 0);
   const finalPrice = Math.max(0, basePrice - discount);
   const accountEmail = (user?.email || "").trim().toLowerCase();
   const bookingEmail = formData.email.trim().toLowerCase();
@@ -210,7 +212,7 @@ export default function BookingPage() {
         customerEmail: user?.email || formData.email,
         date: selectedDate,
         time: selectedTime,
-        serviceIds: selectedServices,
+        serviceIds: [...selectedServices, ...selectedAddons],
         numPeople,
         staffId: selectedStaff === "any" ? null : selectedStaff,
         notes: formData.notes,
@@ -386,6 +388,32 @@ export default function BookingPage() {
                       </button>
                     ))}
                   </div>
+                </motion.div>
+              )}
+
+              {/* Add-ons / Upsell (Extras category) */}
+              {step === 1 && services.some(s => s.category === "extras") && (
+                <motion.div key="addons" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
+                  <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><Sparkles size={18} className="text-amber-500" /> Add-ons (optional)</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {services.filter(s => s.category === "extras").map((a) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAddons(prev => prev.includes(a.id) ? prev.filter(id => id !== a.id) : [...prev, a.id]);
+                        }}
+                        className={cn(
+                          "text-left p-3 rounded-xl border text-sm flex items-center justify-between gap-2",
+                          selectedAddons.includes(a.id) ? "border-amber-400 bg-amber-50" : "border-gray-100 hover:border-amber-200"
+                        )}
+                      >
+                        <span className="truncate">{a.name}</span>
+                        <span className="font-bold text-amber-600 whitespace-nowrap">{formatPrice(a.price)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1">Add-ons are added to your booking and price.</p>
                 </motion.div>
               )}
 
@@ -644,6 +672,7 @@ export default function BookingPage() {
                     <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><ShieldCheck size={18} /> Booking Summary</h4>
                     <div className="space-y-2 text-sm">
                       <p className="flex justify-between"><span className="text-gray-500">Service:</span> <span className="font-medium">{selectedServiceObjects.length ? selectedServiceObjects.map(s => s.name).join(", ") : "Select service(s)"}</span></p>
+                      {selectedAddonObjects.length > 0 && <p className="flex justify-between"><span className="text-gray-500">Add-ons:</span> <span className="font-medium text-amber-600">{selectedAddonObjects.map(s => s.name).join(", ")}</span></p>}
                       <p className="flex justify-between">
                         <span className="text-gray-500">Price:</span>
                         <span className="font-bold text-pink-600">
