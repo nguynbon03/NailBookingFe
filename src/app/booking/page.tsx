@@ -109,8 +109,9 @@ export default function BookingPage() {
   const service = services.find((s) => s.id === selectedService || s.name === selectedService);
   const selectedServiceObjects = services.filter((s) => selectedServices.includes(s.id) || selectedServices.includes(s.name));
   const selectedAddonObjects = services.filter((s) => selectedAddons.includes(s.id) || selectedAddons.includes(s.name));
-  const basePrice = [...selectedServiceObjects, ...selectedAddonObjects].reduce((sum, s) => sum + Number(s.price || 0), 0);
-  const finalPrice = Math.max(0, basePrice - discount);
+  const perPersonPrice = [...selectedServiceObjects, ...selectedAddonObjects].reduce((sum, s) => sum + Number(s.price || 0), 0);
+  const subtotalPrice = Math.round(perPersonPrice * numPeople * 100) / 100;
+  const finalPrice = Math.max(0, subtotalPrice - discount);
   const accountEmail = (user?.email || "").trim().toLowerCase();
   const bookingEmail = formData.email.trim().toLowerCase();
   const confirmEmail = formData.emailConfirm.trim().toLowerCase();
@@ -120,6 +121,7 @@ export default function BookingPage() {
 
   useEffect(() => {
     setSelectedTime("");
+    setNumPeople(1);
     setSlotsError("");
     setAvailableSlots([]);
     if (!selectedDate || !service?.id) return;
@@ -136,6 +138,14 @@ export default function BookingPage() {
       })
       .finally(() => setSlotsLoading(false));
   }, [selectedDate, selectedStaff, service?.id]);
+
+  const selectedSlot = availableSlots.find((slot) => slot.time === selectedTime);
+  const selectedSlotCapacity = Math.max(1, Number(selectedSlot?.availableStaffCount || 1));
+
+  useEffect(() => {
+    if (!selectedTime) return;
+    setNumPeople((current) => Math.min(Math.max(1, current), selectedSlotCapacity));
+  }, [selectedTime, selectedSlotCapacity]);
 
   const handleNext = () => { if (step < 4) setStep(step + 1); };
   const handleBack = () => { if (step > 1) setStep(step - 1); };
@@ -174,7 +184,7 @@ export default function BookingPage() {
     const code = formData.promoCode.trim().toUpperCase();
     if (!code) return;
     try {
-      const result = await api.promoCodes.validate(code, basePrice);
+      const result = await api.promoCodes.validate(code, subtotalPrice);
       setDiscount(Number(result.discount || 0));
       setPromoError("");
     } catch (err: any) {
@@ -237,7 +247,7 @@ export default function BookingPage() {
   const canProceed =
     (step === 1 && selectedServices.length > 0) ||
     (step === 2 && selectedDate) ||
-    (step === 3 && selectedTime) ||
+    (step === 3 && selectedTime && numPeople <= selectedSlotCapacity) ||
     step === 4;
 
   const step4Valid = Boolean(user && formData.name && formData.phone && emailValid && emailMatchesAccount && emailConfirmMatchesAccount && formData.termsAccepted && phoneVerified);
@@ -303,8 +313,19 @@ export default function BookingPage() {
                 </div>
                 <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-700 space-y-1 sm:col-span-2">
                   <p><span className="font-bold">Date:</span> {selectedDate} at {selectedTime}</p>
-                  <p><span className="font-bold">Service:</span> {service?.name}</p>
+                  <p><span className="font-bold">Services:</span> {selectedServiceObjects.map(s => s.name).join(", ") || service?.name}</p>
+                  <p><span className="font-bold">People:</span> {numPeople}</p>
                   <p><span className="font-bold">Email:</span> {formData.email}</p>
+                </div>
+                <div className="rounded-2xl border border-pink-100 bg-white p-4 text-sm text-gray-700 space-y-2 sm:col-span-2">
+                  <div className="flex items-center justify-between border-b border-pink-50 pb-2">
+                    <p className="font-black text-gray-900">Invoice</p>
+                    <p className="text-xs font-bold text-pink-600">{reference}</p>
+                  </div>
+                  <p className="flex justify-between"><span>Services subtotal</span><span>{formatPrice(perPersonPrice)} × {numPeople}</span></p>
+                  <p className="flex justify-between"><span>Subtotal</span><span>{formatPrice(subtotalPrice)}</span></p>
+                  {discount > 0 && <p className="flex justify-between text-green-600"><span>Discount</span><span>-{formatPrice(discount)}</span></p>}
+                  <p className="flex justify-between text-base font-black text-gray-900 border-t border-pink-50 pt-2"><span>Total</span><span>{formatPrice(finalPrice)}</span></p>
                 </div>
               </div>
 
@@ -467,31 +488,6 @@ export default function BookingPage() {
                       </div>
                     </div>
 
-                    
-                    {/* Multi-person / Group booking */}
-                    <div className="pt-4 border-t border-pink-100">
-                      <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <Users size={16} /> Number of people (group booking)
-                      </label>
-                      <div className="flex items-center gap-3">
-                        {[1,2,3,4,5,6].map(n => (
-                          <button
-                            key={n}
-                            onClick={() => setNumPeople(n)}
-                            className={cn(
-                              "px-4 py-2 rounded-xl border text-sm font-semibold transition",
-                              numPeople === n ? "bg-pink-600 text-white border-pink-600" : "border-pink-200 hover:bg-pink-50"
-                            )}
-                          >
-                            {n}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1.5">
-                        Price is multiplied by number of people (e.g. 5 people = 5× service). The time slot is still blocked only once.
-                      </p>
-                    </div>
-
                     <div>
                       <p className="text-sm text-gray-500 mb-4">Available slots for {selectedDate}</p>
                       {slotsLoading ? (
@@ -503,7 +499,10 @@ export default function BookingPage() {
                           {availableSlots.map((slot) => (
                             <button
                               key={slot.time}
-                              onClick={() => setSelectedTime(slot.time)}
+                              onClick={() => {
+                                setSelectedTime(slot.time);
+                                setNumPeople((current) => Math.min(current, Math.max(1, slot.availableStaffCount)));
+                              }}
                               className={cn(
                                 "py-3 px-4 rounded-xl text-sm font-semibold transition-all",
                                 selectedTime === slot.time
@@ -512,10 +511,42 @@ export default function BookingPage() {
                               )}
                             >
                               {slot.time}
-                              <span className="block text-[10px] opacity-70">{slot.availableStaffCount} free</span>
+                              <span className="block text-[10px] opacity-70">{slot.availableStaffCount} seat{slot.availableStaffCount === 1 ? "" : "s"} left</span>
                             </button>
                           ))}
                         </div>
+                      )}
+                    </div>
+
+                    {/* Multi-person / Group booking — capacity follows selected time like cinema seats */}
+                    <div className="pt-4 border-t border-pink-100">
+                      <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <Users size={16} /> Number of people
+                      </label>
+                      {!selectedTime ? (
+                        <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
+                          Select a time first. The number of people will be limited by staff seats left at that time.
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {Array.from({ length: selectedSlotCapacity }, (_, i) => i + 1).map(n => (
+                              <button
+                                key={n}
+                                onClick={() => setNumPeople(n)}
+                                className={cn(
+                                  "min-w-11 px-4 py-2 rounded-xl border text-sm font-semibold transition",
+                                  numPeople === n ? "bg-pink-600 text-white border-pink-600" : "border-pink-200 hover:bg-pink-50"
+                                )}
+                              >
+                                {n}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1.5">
+                            {selectedSlotCapacity} staff-capacity seat{selectedSlotCapacity === 1 ? "" : "s"} left at {selectedTime}. You can only book up to the number of free seats.
+                          </p>
+                        </>
                       )}
                     </div>
                   </div>
@@ -644,7 +675,7 @@ export default function BookingPage() {
                         <button onClick={applyPromo} className="btn-primary px-5">Apply</button>
                       </div>
                       {promoError && <p className="text-red-500 text-xs mt-1">{promoError}</p>}
-                      {discount > 0 && <p className="text-green-600 text-xs mt-1">Discount applied: -£{discount}</p>}
+                      {discount > 0 && <p className="text-green-600 text-xs mt-1">Discount applied: -{formatPrice(discount)}</p>}
                     </div>
 
                     {/* Medical checkboxes */}
@@ -673,20 +704,22 @@ export default function BookingPage() {
                     <div className="space-y-2 text-sm">
                       <p className="flex justify-between"><span className="text-gray-500">Service:</span> <span className="font-medium">{selectedServiceObjects.length ? selectedServiceObjects.map(s => s.name).join(", ") : "Select service(s)"}</span></p>
                       {selectedAddonObjects.length > 0 && <p className="flex justify-between"><span className="text-gray-500">Add-ons:</span> <span className="font-medium text-amber-600">{selectedAddonObjects.map(s => s.name).join(", ")}</span></p>}
+                      <p className="flex justify-between"><span className="text-gray-500">People:</span> <span className="font-medium">{numPeople}</span></p>
+                      <p className="flex justify-between"><span className="text-gray-500">Price per person:</span> <span className="font-medium">{formatPrice(perPersonPrice)}</span></p>
                       <p className="flex justify-between">
-                        <span className="text-gray-500">Price:</span>
+                        <span className="text-gray-500">Total:</span>
                         <span className="font-bold text-pink-600">
                           {discount > 0 ? (
                             <>
-                              <span className="line-through text-gray-400 text-xs mr-2">£${basePrice}</span>
-                              £${finalPrice}
+                              <span className="line-through text-gray-400 text-xs mr-2">{formatPrice(subtotalPrice)}</span>
+                              {formatPrice(finalPrice)}
                             </>
                           ) : (
-                            <>£${basePrice}</>
+                            <>{formatPrice(subtotalPrice)}</>
                           )}
                         </span>
                       </p>
-                      {discount > 0 && <p className="flex justify-between"><span className="text-gray-500">Discount:</span> <span className="text-green-600 font-bold">-£{discount}</span></p>}
+                      {discount > 0 && <p className="flex justify-between"><span className="text-gray-500">Discount:</span> <span className="text-green-600 font-bold">-{formatPrice(discount)}</span></p>}
                       <p className="flex justify-between"><span className="text-gray-500">Date:</span> <span className="font-medium">{selectedDate}</span></p>
                       <p className="flex justify-between"><span className="text-gray-500">Time:</span> <span className="font-medium">{selectedTime}</span></p>
                       <p className="flex justify-between"><span className="text-gray-500">Staff:</span> <span className="font-medium">{selectedStaff === "any" ? "Any Staff" : staffList.find(s => s.id === selectedStaff)?.name}</span></p>
@@ -703,7 +736,7 @@ export default function BookingPage() {
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     )}
                   >
-                    {loading ? "Processing..." : "Send Secure Transfer Link"}
+                    {loading ? "Processing..." : "Submit Booking Request"}
                   </button>
                 </motion.div>
               )}

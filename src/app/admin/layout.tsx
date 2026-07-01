@@ -83,17 +83,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         );
       })}
-      <a
-        href="/"
-        className={cn(
-          mobile
-            ? "min-w-fit flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 mt-1"
-            : "flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-200 hover:bg-gray-800 border-t border-gray-700 mt-2 pt-3 text-sm"
-        )}
-      >
-        <Home size={mobile ? 15 : 17} />
-        Back to Site
-      </a>
+      {!mobile && (
+        <a
+          href="/"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-200 hover:bg-gray-800 border-t border-gray-700 mt-2 pt-3 text-sm"
+        >
+          <Home size={17} />
+          Back to Site
+        </a>
+      )}
     </nav>
   );
 
@@ -108,17 +106,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
         {nav(false)}
-        <div className="mt-auto pt-4 border-t border-gray-800">
-          <a href="/" className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm text-white w-full">
-            <Home size={16} /> Back to Site
-          </a>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-1.5 rounded-xl border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-600"
-          >
-            <RefreshCw size={14} /> Reload Console
-          </button>
-        </div>
       </aside>
 
       {/* Mobile Header */}
@@ -137,13 +124,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Content */}
       <main className="flex-1 p-3 sm:p-5 lg:p-8">
-        {/* Desktop top Back to Site bar */}
-        <div className="hidden lg:flex mb-4 justify-end">
-          <a href="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 hover:bg-white text-sm text-gray-600">
-            <Home size={16} /> ← Back to Site
-          </a>
-        </div>
-
         {children}
       </main>
     </div>

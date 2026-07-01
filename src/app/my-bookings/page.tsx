@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { AlertCircle, CalendarDays, Clock, MessageCircle, Phone, Scissors, Tag, XCircle } from "lucide-react";
+import { AlertCircle, CalendarDays, Clock, MessageCircle, Phone, Scissors, XCircle } from "lucide-react";
 
 function money(value: number) {
   return `£${Number(value || 0).toFixed(2)}`;
@@ -34,6 +34,7 @@ type Booking = {
   time: string;
   status: string;
   totalPrice: number;
+  numPeople?: number;
   discount: number | null;
   promoCode: string | null;
   cancellationReason?: string | null;
@@ -124,6 +125,9 @@ export default function MyBookingsPage() {
               {bookings.map((booking) => {
                 const firstService = booking.services?.[0]?.service;
                 const meta = statusMeta(booking);
+                const people = Math.max(1, Number(booking.numPeople || 1));
+                const perPersonTotal = (booking.services || []).reduce((sum, item) => sum + Number(item.service?.price || 0), 0);
+                const subtotal = Math.round(perPersonTotal * people * 100) / 100;
                 return (
                   <div key={booking.id} className="bg-white rounded-3xl border border-pink-100 p-5 sm:p-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row gap-5">
@@ -153,10 +157,20 @@ export default function MyBookingsPage() {
                             <AlertCircle size={16} className="shrink-0 mt-0.5" /> Cancellation request sent. Waiting for shop review.
                           </div>
                         )}
+                        <div className="mt-4 rounded-2xl border border-pink-50 bg-pink-50/30 p-4 text-sm">
+                          <div className="flex items-center justify-between border-b border-pink-100 pb-2 mb-2">
+                            <span className="font-black text-gray-900">Invoice</span>
+                            <span className="text-xs text-gray-400">Booking ID: {booking.id.slice(-8).toUpperCase()}</span>
+                          </div>
+                          <div className="space-y-1 text-gray-600">
+                            <p className="flex justify-between"><span>People</span><span className="font-semibold">{people}</span></p>
+                            <p className="flex justify-between"><span>Services subtotal</span><span>{money(perPersonTotal)} × {people}</span></p>
+                            <p className="flex justify-between"><span>Subtotal</span><span>{money(subtotal)}</span></p>
+                            {booking.discount ? <p className="flex justify-between text-green-600"><span>Discount {booking.promoCode ? `(${booking.promoCode})` : ""}</span><span>-{money(booking.discount)}</span></p> : null}
+                            <p className="flex justify-between pt-2 mt-2 border-t border-pink-100 text-base font-black text-gray-900"><span>Total</span><span>{money(booking.totalPrice)}</span></p>
+                          </div>
+                        </div>
                         <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-pink-50">
-                          <span className="font-bold text-gray-900">Total: {money(booking.totalPrice)}</span>
-                          {booking.discount ? <span className="flex items-center gap-1 text-green-600 text-sm"><Tag size={14} />-{money(booking.discount)} {booking.promoCode}</span> : null}
-                          <span className="text-xs text-gray-400">Booking ID: {booking.id.slice(-8).toUpperCase()}</span>
                           {!["CANCELLED", "COMPLETED", "NO_SHOW"].includes(booking.status) && !booking.cancellationReason?.startsWith("Customer requested") && (
                             <button onClick={() => { setCancelTarget(booking); setCancelReason(""); }} className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-black text-gray-500 hover:border-red-100 hover:bg-red-50 hover:text-red-600">
                               <XCircle size={14} /> {booking.status === "CONFIRMED" ? "Need to cancel?" : "Request cancel"}
