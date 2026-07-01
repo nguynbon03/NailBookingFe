@@ -115,7 +115,8 @@ export default function BookingPage() {
   const accountEmail = (user?.email || "").trim().toLowerCase();
   const bookingEmail = formData.email.trim().toLowerCase();
   const confirmEmail = formData.emailConfirm.trim().toLowerCase();
-  const emailValid = isEmailAddress(formData.email);
+  const accountUsesEmail = isEmailAddress(accountEmail);
+  const emailValid = accountUsesEmail ? isEmailAddress(formData.email) : Boolean(formData.email.trim());
   const emailMatchesAccount = Boolean(user && accountEmail && bookingEmail === accountEmail);
   const emailConfirmMatchesAccount = Boolean(user && accountEmail && confirmEmail === accountEmail);
 
@@ -209,11 +210,14 @@ export default function BookingPage() {
       window.location.href = "/login?next=/booking";
       return;
     }
-    if (!emailMatchesAccount || !emailConfirmMatchesAccount) {
-      alert("The booking email and confirmation email must both match your signed-in account email.");
+    if (!emailMatchesAccount || !emailConfirmMatchesAccount || !emailValid) {
+      alert(accountUsesEmail ? "The booking email and confirmation email must both match your signed-in account email." : "The booking account and confirmation account must both match your signed-in account.");
       return;
     }
-    if (!formData.termsAccepted) return;
+    if (!formData.healthConfirmed || !formData.allergiesConfirmed || !formData.termsAccepted) {
+      alert("Please tick all health, allergy, and terms confirmations before submitting.");
+      return;
+    }
     setLoading(true);
     try {
       const result = await api.bookings.create({
@@ -250,7 +254,16 @@ export default function BookingPage() {
     (step === 3 && selectedTime && numPeople <= selectedSlotCapacity) ||
     step === 4;
 
-  const step4Valid = Boolean(user && formData.name && formData.phone && emailValid && emailMatchesAccount && emailConfirmMatchesAccount && formData.termsAccepted && phoneVerified);
+  const step4Valid = Boolean(user && formData.name && formData.phone && emailValid && emailMatchesAccount && emailConfirmMatchesAccount && formData.healthConfirmed && formData.allergiesConfirmed && formData.termsAccepted && phoneVerified);
+  const submitRequirements = [
+    !phoneVerified ? "verify phone OTP" : "",
+    !formData.name ? "enter full name" : "",
+    !formData.phone ? "enter phone number" : "",
+    !emailValid || !emailMatchesAccount || !emailConfirmMatchesAccount ? (accountUsesEmail ? "re-type the signed-in email exactly" : "re-type the signed-in account exactly") : "",
+    !formData.healthConfirmed ? "tick health confirmation" : "",
+    !formData.allergiesConfirmed ? "tick allergy confirmation" : "",
+    !formData.termsAccepted ? "accept terms and privacy consent" : "",
+  ].filter(Boolean);
 
   if (!authLoading && !user) {
     return (
@@ -615,21 +628,21 @@ export default function BookingPage() {
                       </div>
                     </div>
 
-                    {/* Verified account email */}
+                    {/* Verified account */}
                     <div className="rounded-3xl border border-pink-100 bg-gradient-to-r from-pink-50/80 to-rose-50/70 p-4 sm:p-5 space-y-4">
                       <div className="grid grid-cols-[48px_1fr] gap-3 sm:gap-4 items-start">
                         <div className="h-12 w-12 shrink-0 rounded-2xl bg-white text-pink-600 shadow-sm flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/></svg></div>
                         <div className="min-w-0">
-                          <p className="text-xs font-black uppercase tracking-wide text-pink-500">Verified account email</p>
+                          <p className="text-xs font-black uppercase tracking-wide text-pink-500">{accountUsesEmail ? "Verified account email" : "Verified account ID"}</p>
                           <p className="mt-1 break-all text-base sm:text-lg font-black leading-snug text-gray-900">{user?.email}</p>
                           <p className="mt-1 text-sm text-gray-500">This verified account is used for anti-spam protection, booking updates, and any deposit link if required.</p>
                         </div>
                       </div>
                       <div className="rounded-2xl bg-white/80 p-3 sm:p-4 border border-pink-100">
-                        <label className="mb-2 block text-xs font-black uppercase tracking-wide text-gray-500">Re-type the same email</label>
+                        <label className="mb-2 block text-xs font-black uppercase tracking-wide text-gray-500">{accountUsesEmail ? "Re-type the same email" : "Re-type the same account ID"}</label>
                         <input
-                          placeholder={user?.email || "Type your account email again"}
-                          type="email"
+                          placeholder={user?.email || (accountUsesEmail ? "Type your account email again" : "Type your account ID again")}
+                          type={accountUsesEmail ? "email" : "text"}
                           value={formData.emailConfirm}
                           onChange={(e) => setFormData({ ...formData, emailConfirm: e.target.value })}
                           className={cn("w-full min-h-14 px-4 rounded-xl border bg-white focus:ring-4 outline-none text-base sm:text-lg font-semibold", formData.emailConfirm && !emailConfirmMatchesAccount ? "border-red-300 focus:ring-red-100" : "border-pink-200 focus:ring-pink-100")}
@@ -725,6 +738,15 @@ export default function BookingPage() {
                       <p className="flex justify-between"><span className="text-gray-500">Staff:</span> <span className="font-medium">{selectedStaff === "any" ? "Any Staff" : staffList.find(s => s.id === selectedStaff)?.name}</span></p>
                     </div>
                   </div>
+
+                  {submitRequirements.length > 0 && (
+                    <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                      <p className="font-bold mb-2">Before submitting, please:</p>
+                      <ul className="list-disc pl-5 space-y-1">
+                        {submitRequirements.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                  )}
 
                   <button
                     onClick={handleSubmit}
