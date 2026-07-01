@@ -460,7 +460,7 @@ export default function BookingPage() {
                         ))}
                       </div>
                       <p className="text-xs text-gray-500 mt-1.5">
-                        Giá sẽ nhân với số người (ví dụ: 5 người = 5× dịch vụ). Slot vẫn chỉ block 1 lần.
+                        Price is multiplied by number of people (e.g. 5 people = 5× service). The time slot is still blocked only once.
                       </p>
                     </div>
 
