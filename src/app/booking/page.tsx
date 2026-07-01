@@ -41,6 +41,7 @@ export default function BookingPage() {
   const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [formData, setFormData] = useState({
@@ -105,6 +106,7 @@ export default function BookingPage() {
   }, [authLoading, user?.id, user?.email, user?.name, user?.phone]);
 
   const service = services.find((s) => s.id === selectedService || s.name === selectedService);
+  const selectedServiceObjects = services.filter((s) => selectedServices.includes(s.id) || selectedServices.includes(s.name) || (selectedService && (s.id === selectedService || s.name === selectedService)));
   const basePrice = selectedServiceObjects.reduce((sum, s) => sum + Number(s.price || 0), 0);
   const finalPrice = Math.max(0, basePrice - discount);
   const accountEmail = (user?.email || "").trim().toLowerCase();

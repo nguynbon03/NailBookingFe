@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { TrendingUp, CalendarDays, Package, Users, LogOut, Tags, UserCog, CalendarOff, ShieldCheck, Inbox, FileText, BarChart3, User as UserIcon } from "lucide-react";
+import { TrendingUp, CalendarDays, Package, Users, LogOut, Tags, UserCog, CalendarOff, ShieldCheck, Inbox, FileText, BarChart3, User as UserIcon, Home } from "lucide-react";
 import Link from "next/link";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -36,12 +36,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (loading || typeof window === "undefined") return;
-
     if (!user) {
       window.location.href = "/login";
       return;
     }
-
     if (!adminRoles.has(user.role)) {
       window.location.href = user.role === "STAFF" ? "/staff" : "/";
     }
@@ -87,30 +85,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-gray-50 lg:flex">
+      {/* Desktop Sidebar */}
       <aside className="hidden lg:block w-64 bg-gray-900 text-white p-6 flex-shrink-0 h-screen sticky top-0">
-        <h1 className="text-xl font-bold mb-8">{productLabel}</h1>
-        {nav(false)}
-        <div className="mt-8 pt-6 border-t border-gray-700">
-          <Link href="/" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-800 text-gray-400">
-            <LogOut size={18} /> Back to Site
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-xl font-bold">{productLabel}</h1>
+          <Link href="/" className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs text-gray-300">
+            <Home size={14} /> Back to Site
           </Link>
         </div>
+        {nav(false)}
       </aside>
 
+      {/* Mobile Header */}
       <header className="lg:hidden sticky top-0 z-40 bg-gray-50/95 backdrop-blur border-b border-gray-200 pt-3">
         <div className="flex items-center justify-between px-3 pb-3">
           <div>
             <p className="text-xs text-pink-600 font-black uppercase tracking-wide">{consoleLabel}</p>
             <h1 className="text-base font-black text-gray-900 leading-tight">Nail Lounge</h1>
           </div>
-          <Link href="/" className="h-10 px-3 rounded-xl bg-gray-900 text-white text-xs font-bold inline-flex items-center gap-1.5">
-            <LogOut size={14} /> Site
+          <Link href="/" className="h-10 px-4 rounded-xl bg-gray-900 text-white text-xs font-bold inline-flex items-center gap-1.5">
+            <Home size={14} /> Back to Site
           </Link>
         </div>
         {nav(true)}
       </header>
 
-      <main className="flex-1 p-3 sm:p-5 lg:p-8 overflow-auto">{children}</main>
+      {/* Main Content */}
+      <main className="flex-1 p-3 sm:p-5 lg:p-8 overflow-auto">
+        {/* Always visible Back to Site bar for desktop too */}
+        <div className="hidden lg:flex justify-end mb-4">
+          <Link href="/" className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 hover:bg-white text-sm text-gray-600">
+            <Home size={16} /> ← Back to Site
+          </Link>
+        </div>
+        {children}
+      </main>
     </div>
   );
 }
