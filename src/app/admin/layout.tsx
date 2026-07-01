@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { TrendingUp, CalendarDays, Package, Users, LogOut, Tags, UserCog, CalendarOff, ShieldCheck, Inbox, FileText, BarChart3, User as UserIcon, Home } from "lucide-react";
+import { TrendingUp, CalendarDays, Package, Users, Tags, UserCog, CalendarOff, ShieldCheck, Inbox, FileText, BarChart3, User as UserIcon, Home, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -29,6 +29,8 @@ const sidebarLinks = [
 ];
 
 const adminRoles = new Set(["ADMIN", "MANAGER"]);
+
+const DEPLOY_VERSION = "v2026-07-01-14:15"; // force visible version
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -57,7 +59,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const productLabel = `Nail Lounge ${consoleLabel}`;
 
   const nav = (mobile = false) => (
-    <nav className={mobile ? "flex gap-2 overflow-x-auto px-3 pb-3" : "space-y-2"}>
+    <nav className={mobile ? "flex gap-2 overflow-x-auto px-3 pb-3" : "space-y-1"}>
       {sidebarLinks.map((link) => {
         const isActive = pathname === link.href;
         return (
@@ -67,7 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className={cn(
               mobile
                 ? "min-w-fit flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors"
-                : "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors",
+                : "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors text-sm",
               isActive
                 ? "bg-pink-600 text-white"
                 : mobile
@@ -75,66 +77,72 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   : "text-gray-200 hover:bg-gray-800"
             )}
           >
-            <link.icon size={mobile ? 15 : 18} />
+            <link.icon size={mobile ? 15 : 17} />
             {link.label}
           </Link>
         );
       })}
-      {/* Always visible Back to Site in nav */}
-      <Link
+      <a
         href="/"
         className={cn(
           mobile
-            ? "min-w-fit flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700"
-            : "flex items-center gap-3 px-4 py-3 rounded-xl text-gray-200 hover:bg-gray-800 border-t border-gray-700 mt-2 pt-3"
+            ? "min-w-fit flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 mt-1"
+            : "flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-200 hover:bg-gray-800 border-t border-gray-700 mt-2 pt-3 text-sm"
         )}
       >
-        <Home size={mobile ? 15 : 18} />
+        <Home size={mobile ? 15 : 17} />
         Back to Site
-      </Link>
+      </a>
     </nav>
   );
 
   return (
     <div className="min-h-screen bg-gray-50 lg:flex">
-      {/* Desktop Sidebar - ALWAYS has Back to Site */}
-      <aside className="hidden lg:block w-64 bg-gray-900 text-white p-6 flex-shrink-0 h-screen sticky top-0 overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex w-64 bg-gray-900 text-white p-5 flex-shrink-0 h-screen sticky top-0 flex-col overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-bold">{productLabel}</h1>
-            <p className="text-[10px] text-gray-500">ADMIN CONSOLE</p>
+            <h1 className="text-lg font-bold">{productLabel}</h1>
+            <p className="text-[10px] text-gray-500">ADMIN • {DEPLOY_VERSION}</p>
           </div>
         </div>
         {nav(false)}
-        <div className="mt-auto pt-8">
-          <Link href="/" className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm text-white w-full justify-center">
+        <div className="mt-auto pt-4 border-t border-gray-800">
+          <a href="/" className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm text-white w-full">
             <Home size={16} /> Back to Site
-          </Link>
+          </a>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-1.5 rounded-xl border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-600"
+          >
+            <RefreshCw size={14} /> Reload Console
+          </button>
         </div>
       </aside>
 
       {/* Mobile Header */}
-      <header className="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-200">
+      <header className="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur border-b">
         <div className="flex items-center justify-between px-3 py-3">
           <div>
-            <p className="text-xs text-pink-600 font-black uppercase">{consoleLabel}</p>
+            <p className="text-xs text-pink-600 font-black uppercase tracking-wide">{consoleLabel} {DEPLOY_VERSION}</p>
             <h1 className="text-base font-black text-gray-900">Nail Lounge</h1>
           </div>
-          <Link href="/" className="px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-bold flex items-center gap-1.5">
+          <a href="/" className="px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-bold flex items-center gap-1.5">
             <Home size={14} /> Back to Site
-          </Link>
+          </a>
         </div>
-        <div className="border-t px-3 pb-2">{nav(true)}</div>
+        <div className="border-t px-3 pb-2 overflow-x-auto">{nav(true)}</div>
       </header>
 
-      {/* Main */}
-      <main className="flex-1 p-3 sm:p-5 lg:p-8 overflow-auto">
-        {/* Desktop top bar Back to Site - always visible */}
+      {/* Main Content */}
+      <main className="flex-1 p-3 sm:p-5 lg:p-8">
+        {/* Desktop top Back to Site bar */}
         <div className="hidden lg:flex mb-4 justify-end">
-          <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 hover:bg-white text-sm font-medium text-gray-700">
+          <a href="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 hover:bg-white text-sm text-gray-600">
             <Home size={16} /> ← Back to Site
-          </Link>
+          </a>
         </div>
+
         {children}
       </main>
     </div>
