@@ -57,10 +57,10 @@ export default function BookingPage() {
   const [submitted, setSubmitted] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<any | null>(null);
   const [verificationInfo, setVerificationInfo] = useState<any | null>(null);
-  const [notificationDelivery, setNotificationDelivery] = useState<any | null>(null);
-    const [notificationDelivery, setNotificationDelivery] = useState<any | null>(null);
   const [promoError, setPromoError] = useState("");
   const [phoneVerified, setPhoneVerified] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [phoneToVerify, setPhoneToVerify] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpChannel, setOtpChannel] = useState<"auto" | "whatsapp" | "sms">("auto");
@@ -469,6 +469,34 @@ export default function BookingPage() {
                   <div className="bg-white rounded-2xl p-6 shadow-sm border border-pink-100 space-y-5">
                     {/* Contact info */}
                     <div className="grid sm:grid-cols-2 gap-4">
+                      // OTP verification for phone
+                      <div className="sm:col-span-2">
+                        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="font-bold text-amber-800">Verify your phone number (WhatsApp or SMS OTP)</p>
+                            {phoneVerified <div className="grid sm:grid-cols-2 gap-4"><div className="grid sm:grid-cols-2 gap-4"> <span className="text-emerald-600 font-bold">✅ Verified</span>}
+                          </div>
+                          <p className="text-xs text-amber-700 mb-3">Required to prevent spam and fake bookings. Code sent to {formData.phone}.</p>
+                          {!otpSent ? (
+                            <div className="flex gap-2">
+                              <select value={otpChannel} onChange={(e)=>setOtpChannel(e.target.value as any)} className="px-2 py-1 rounded border">
+                                <option value="auto">Auto (WhatsApp first)</option>
+                                <option value="whatsapp">WhatsApp</option>
+                                <option value="sms">SMS</option>
+                              </select>
+                              <button onClick={sendOTPForBooking} disabled={otpLoading || !formData.phone} className="px-4 py-1 bg-amber-600 text-white rounded text-sm">Send OTP</button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <input value={otpCode} onChange={(e)=>setOtpCode(e.target.value)} placeholder="Enter 6-digit code" className="flex-1 px-3 py-1 border rounded text-sm" maxLength={6} />
+                              <button onClick={verifyOTPForBooking} disabled={otpLoading || !otpCode} className="px-4 py-1 bg-emerald-600 text-white rounded text-sm">Verify</button>
+                              <button onClick={()=>{setOtpSent(false);setOtpCode("");}} className="px-3 py-1 bg-gray-200 rounded text-sm">Resend</button>
+                            </div>
+                          )}
+                          {otpError <div className="grid sm:grid-cols-2 gap-4"><div className="grid sm:grid-cols-2 gap-4"> <p className="text-red-600 text-xs mt-1">{otpError}</p>}
+                          {otpMessage <div className="grid sm:grid-cols-2 gap-4"><div className="grid sm:grid-cols-2 gap-4"> <p className="text-emerald-600 text-xs mt-1">{otpMessage}</p>}
+                        </div>
+                      </div>
                       <div className="relative">
                         <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input placeholder="Full Name *" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full pl-10 p-4 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" />
