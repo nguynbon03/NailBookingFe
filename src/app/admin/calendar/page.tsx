@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CalendarDays, Download, RefreshCw, User, Home } from "lucide-react";
-import Link from "next/link";
+import { CalendarDays, Download, RefreshCw, User } from "lucide-react";
 
 const API = "https://bookingnail.overpowers.agency";
 
@@ -155,11 +154,6 @@ export default function AdminCalendar() {
         </div>
       )}
 
-      <div className="mt-8">
-        <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border hover:bg-white text-sm">
-          <Home size={16} /> ← Back to Site
-        </Link>
-      </div>
     </div>
   );
 }
