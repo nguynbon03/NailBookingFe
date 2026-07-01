@@ -3,13 +3,29 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { api } from "@/lib/api";
 
-interface User { id: string; email: string; name: string; role: string; phone?: string | null; emailVerifiedAt?: string | null; phoneVerifiedAt?: string | null; }
-interface AuthCtx { user: User | null; login: (email: string, password: string) => Promise<User>; loginWithGoogle: (credential: string) => Promise<User>; register: (data: any) => Promise<void>; logout: () => void; loading: boolean; }
+interface AuthUser { 
+  id: string; 
+  email: string; 
+  name: string; 
+  role: string; 
+  phone?: string | null; 
+  emailVerifiedAt?: string | null; 
+  phoneVerifiedAt?: string | null; 
+}
+
+interface AuthCtx { 
+  user: AuthUser | null; 
+  login: (email: string, password: string) => Promise<AuthUser>; 
+  loginWithGoogle: (credential: string) => Promise<AuthUser>; 
+  register: (data: any) => Promise<void>; 
+  logout: () => void; 
+  loading: boolean; 
+}
 
 const AuthContext = createContext<AuthCtx | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,4 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={{ user, login, loginWithGoogle, register, logout, loading }}>{children}</AuthContext.Provider>;
 }
 
-export const useAuth = () => { const ctx = useContext(AuthContext); if (!ctx) throw new Error("useAuth must be in AuthProvider"); return ctx; };
+export const useAuth = () => { 
+  const ctx = useContext(AuthContext); 
+  if (!ctx) throw new Error("useAuth must be in AuthProvider"); 
+  return ctx; 
+};

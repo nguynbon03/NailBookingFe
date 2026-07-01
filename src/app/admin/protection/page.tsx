@@ -1,5 +1,8 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Ban, RefreshCw, Save, ShieldCheck, Trash2 } from "lucide-react";

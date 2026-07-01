@@ -474,7 +474,7 @@ export default function BookingPage() {
                         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
                           <div className="flex items-center justify-between mb-2">
                             <p className="font-bold text-amber-800">Verify your phone number (WhatsApp or SMS OTP)</p>
-                            {phoneVerified <div className="grid sm:grid-cols-2 gap-4"><div className="grid sm:grid-cols-2 gap-4"> <span className="text-emerald-600 font-bold">✅ Verified</span>}
+                            {phoneVerified ? <span className="text-emerald-600 font-bold">✅ Verified</span> : null}
                           </div>
                           <p className="text-xs text-amber-700 mb-3">Required to prevent spam and fake bookings. Code sent to {formData.phone}.</p>
                           {!otpSent ? (
@@ -493,8 +493,8 @@ export default function BookingPage() {
                               <button onClick={()=>{setOtpSent(false);setOtpCode("");}} className="px-3 py-1 bg-gray-200 rounded text-sm">Resend</button>
                             </div>
                           )}
-                          {otpError <div className="grid sm:grid-cols-2 gap-4"><div className="grid sm:grid-cols-2 gap-4"> <p className="text-red-600 text-xs mt-1">{otpError}</p>}
-                          {otpMessage <div className="grid sm:grid-cols-2 gap-4"><div className="grid sm:grid-cols-2 gap-4"> <p className="text-emerald-600 text-xs mt-1">{otpMessage}</p>}
+                          {otpError && <p className="text-red-600 text-xs mt-1">{otpError}</p>}
+                          {otpMessage && <p className="text-emerald-600 text-xs mt-1">{otpMessage}</p>}
                         </div>
                       </div>
                       <div className="relative">
