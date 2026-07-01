@@ -649,11 +649,11 @@ export default function BookingPage() {
                         <span className="font-bold text-pink-600">
                           {discount > 0 ? (
                             <>
-                              <span className="line-through text-gray-400 text-xs mr-2">£${basePrice}</span>
-                              £${finalPrice}
+                              <span className="line-through text-gray-400 text-xs mr-2">£{basePrice}</span>
+                              £{finalPrice}
                             </>
                           ) : (
-                            £${basePrice}
+                            <>£{basePrice}</>
                           )}
                         </span>
                       </p>
