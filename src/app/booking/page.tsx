@@ -61,7 +61,7 @@ export default function BookingPage() {
   const [submitted, setSubmitted] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<any | null>(null);
   const [verificationInfo, setVerificationInfo] = useState<any | null>(null);
-  const [notificationDelivery, setNotificationDelivery] = useState<any | null>(null);
+  const [bookingResult, setBookingResult] = useState<any | null>(null);
   const [promoError, setPromoError] = useState("");
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
@@ -246,7 +246,7 @@ export default function BookingPage() {
       });
       setCreatedBooking(result.booking || null);
       setVerificationInfo(result.verification || null);
-      setNotificationDelivery(result.notificationDelivery || null);
+      setBookingResult(result || null);
       setSubmitted(true);
     } catch (e: any) {
       alert(e.message || "Booking failed");
@@ -295,8 +295,8 @@ export default function BookingPage() {
   if (submitted) {
     const reference = verificationInfo?.reference || bookingReference(createdBooking?.id);
     const depositRequired = verificationInfo?.status === "DEPOSIT_REQUIRED";
-    const emailSent = Number(notificationDelivery?.email?.sent || 0) > 0;
-    const emailProblem = notificationDelivery?.email?.error || notificationDelivery?.email?.status;
+    const emailSent = Number(bookingResult?.notificationDelivery?.email?.sent || 0) > 0;
+    const emailProblem = bookingResult?.notificationDelivery?.email?.error || bookingResult?.notificationDelivery?.email?.status;
     return (
       <>
         <Navbar />
