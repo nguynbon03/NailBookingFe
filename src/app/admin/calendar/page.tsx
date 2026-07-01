@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, Download, RefreshCw, User } from "lucide-react";
 
+const API_BASE = "https://bookingnail.overpowers.agency";
+
 type Staff = { id: string; name: string; avatar?: string | null; role?: string };
 type Booking = {
   id: string;
@@ -21,10 +23,7 @@ export const dynamic = "force-dynamic";
 export default function AdminCalendarPage() {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [schedule, setSchedule] = useState<Record<string, Booking[]>>({});
-  const [from, setFrom] = useState(() => {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
-  });
+  const [from, setFrom] = useState(() => new Date().toISOString().slice(0, 10));
   const [to, setTo] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 6);
@@ -33,33 +32,28 @@ export default function AdminCalendarPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const getToken = () => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("token");
-  };
+  const getToken = () => (typeof window !== "undefined" ? localStorage.getItem("token") : null);
 
   const load = async () => {
     setLoading(true);
     setError("");
     try {
       const token = getToken();
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch(`/api/staff/schedule?from=${from}&to=${to}`, {
-        credentials: "include",
-        headers,
-      });
+      const url = `${API_BASE}/api/staff/schedule?from=${from}&to=${to}`;
+      const res = await fetch(url, { method: "GET", headers, credentials: "include" });
+
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
-        throw new Error(`Failed to load schedule (${res.status}) ${txt}`);
+        throw new Error(`Schedule load failed (${res.status}) ${txt}`);
       }
       const data = await res.json();
       setStaff(data.staff || []);
       setSchedule(data.schedule || {});
     } catch (e: any) {
       setError(e.message || "Could not load calendar");
-      // demo fallback for visibility
       setStaff([{ id: "demo", name: "Emma Linh", role: "Staff" }]);
       setSchedule({ demo: [] });
     } finally {
@@ -70,7 +64,7 @@ export default function AdminCalendarPage() {
   useEffect(() => { load(); }, [from, to]);
 
   const exportICS = (staffId?: string) => {
-    const url = `/api/staff/schedule/export?from=${from}&to=${to}&format=ics${staffId ? `&staffId=${staffId}` : ""}`;
+    const url = `${API_BASE}/api/staff/schedule/export?from=${from}&to=${to}&format=ics${staffId ? `&staffId=${staffId}` : ""}`;
     window.open(url, "_blank");
   };
 
@@ -158,7 +152,7 @@ export default function AdminCalendarPage() {
       )}
 
       <div className="mt-8 p-4 bg-blue-50 rounded-2xl text-sm">
-        <b>2-way Calendar Sync:</b> Use "Export ICS" buttons above to download and import into Google Calendar / Outlook.
+        <b>2-way Calendar Sync:</b> Export ICS above to import into Google/Outlook. (Full 2-way sync coming soon)
       </div>
     </div>
   );

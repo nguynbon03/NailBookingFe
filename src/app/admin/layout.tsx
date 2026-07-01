@@ -80,41 +80,58 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         );
       })}
+      {/* Always visible Back to Site in nav */}
+      <Link
+        href="/"
+        className={cn(
+          mobile
+            ? "min-w-fit flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700"
+            : "flex items-center gap-3 px-4 py-3 rounded-xl text-gray-200 hover:bg-gray-800 border-t border-gray-700 mt-2 pt-3"
+        )}
+      >
+        <Home size={mobile ? 15 : 18} />
+        Back to Site
+      </Link>
     </nav>
   );
 
   return (
     <div className="min-h-screen bg-gray-50 lg:flex">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-64 bg-gray-900 text-white p-6 flex-shrink-0 h-screen sticky top-0">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-xl font-bold">{productLabel}</h1>
-          <Link href="/" className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs text-gray-300">
-            <Home size={14} /> Back to Site
-          </Link>
+      {/* Desktop Sidebar - ALWAYS has Back to Site */}
+      <aside className="hidden lg:block w-64 bg-gray-900 text-white p-6 flex-shrink-0 h-screen sticky top-0 overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-xl font-bold">{productLabel}</h1>
+            <p className="text-[10px] text-gray-500">ADMIN CONSOLE</p>
+          </div>
         </div>
         {nav(false)}
+        <div className="mt-auto pt-8">
+          <Link href="/" className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm text-white w-full justify-center">
+            <Home size={16} /> Back to Site
+          </Link>
+        </div>
       </aside>
 
       {/* Mobile Header */}
-      <header className="lg:hidden sticky top-0 z-40 bg-gray-50/95 backdrop-blur border-b border-gray-200 pt-3">
-        <div className="flex items-center justify-between px-3 pb-3">
+      <header className="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-200">
+        <div className="flex items-center justify-between px-3 py-3">
           <div>
-            <p className="text-xs text-pink-600 font-black uppercase tracking-wide">{consoleLabel}</p>
-            <h1 className="text-base font-black text-gray-900 leading-tight">Nail Lounge</h1>
+            <p className="text-xs text-pink-600 font-black uppercase">{consoleLabel}</p>
+            <h1 className="text-base font-black text-gray-900">Nail Lounge</h1>
           </div>
-          <Link href="/" className="h-10 px-4 rounded-xl bg-gray-900 text-white text-xs font-bold inline-flex items-center gap-1.5">
+          <Link href="/" className="px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-bold flex items-center gap-1.5">
             <Home size={14} /> Back to Site
           </Link>
         </div>
-        {nav(true)}
+        <div className="border-t px-3 pb-2">{nav(true)}</div>
       </header>
 
-      {/* Main Content */}
+      {/* Main */}
       <main className="flex-1 p-3 sm:p-5 lg:p-8 overflow-auto">
-        {/* Always visible Back to Site bar for desktop too */}
-        <div className="hidden lg:flex justify-end mb-4">
-          <Link href="/" className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 hover:bg-white text-sm text-gray-600">
+        {/* Desktop top bar Back to Site - always visible */}
+        <div className="hidden lg:flex mb-4 justify-end">
+          <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 hover:bg-white text-sm font-medium text-gray-700">
             <Home size={16} /> ← Back to Site
           </Link>
         </div>
