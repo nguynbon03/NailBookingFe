@@ -546,9 +546,7 @@ export default function BookingPage() {
                       </div>
                     </div>
 
-                    {/* Staff summary */}
-/* Staff summary */}
-                    <div className="rounded-xl bg-pink-50/60 border border-pink-100 p-4 text-sm text-gray-700">
+                                                            <div className="rounded-xl bg-pink-50/60 border border-pink-100 p-4 text-sm text-gray-700">
                       <span className="font-semibold">Staff:</span> {selectedStaff === "any" ? "Any available staff" : staffList.find((st) => st.id === selectedStaff)?.name || "Selected staff"} · <span className="font-semibold">Time:</span> {selectedTime}
                     </div>
 
