@@ -133,6 +133,36 @@ export default function BookingPage() {
   const handleNext = () => { if (step < 4) setStep(step + 1); };
   const handleBack = () => { if (step > 1) setStep(step - 1); };
 
+  
+  const sendOTPForBooking = async () => {
+    const phone = formData.phone.trim();
+    if (!phone) { alert("Enter phone number first"); return; }
+    setOtpLoading(true); setOtpError("");
+    try {
+      await api.otp.send(phone, otpChannel);
+      setOtpSent(true);
+      setPhoneToVerify(phone);
+    } catch (e: any) {
+      setOtpError(e.message || "Failed to send OTP");
+    } finally { setOtpLoading(false); }
+  };
+
+  const verifyOTPForBooking = async () => {
+    if (!otpCode || otpCode.length < 4) return;
+    setOtpLoading(true); setOtpError("");
+    try {
+      const res = await api.otp.verify(phoneToVerify || formData.phone, otpCode);
+      if (res.success) {
+        setPhoneVerified(true);
+        setOtpError("");
+      } else {
+        setOtpError("Invalid code");
+      }
+    } catch (e: any) {
+      setOtpError(e.message || "Verification failed");
+    } finally { setOtpLoading(false); }
+  };
+
   const applyPromo = async () => {
     const code = formData.promoCode.trim().toUpperCase();
     if (!code) return;
@@ -202,7 +232,7 @@ export default function BookingPage() {
     (step === 3 && selectedTime) ||
     step === 4;
 
-  const step4Valid = Boolean(user && formData.name && formData.phone && emailValid && emailMatchesAccount && emailConfirmMatchesAccount && formData.termsAccepted);
+  const step4Valid = Boolean(user && formData.name && formData.phone && emailValid && emailMatchesAccount && emailConfirmMatchesAccount && formData.termsAccepted && phoneVerified);
 
   if (!authLoading && !user) {
     return (

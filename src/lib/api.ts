@@ -68,6 +68,22 @@ export const api = {
     verify: (phone: string, otp: string) =>
       fetchAPI("/api/otp/verify", { method: "POST", body: JSON.stringify({ phone, otp }) }),
   },
+  // Staff schedule / calendar (2-way view)
+  staffSchedule: (from?: string, to?: string) => {
+    const q = new URLSearchParams();
+    if (from) q.set('from', from);
+    if (to) q.set('to', to);
+    return fetchAPI(`/api/staff/schedule?${q.toString()}`);
+  },
+  scheduleExport: (staffId?: string, from?: string, to?: string) => {
+    const q = new URLSearchParams();
+    if (staffId) q.set('staffId', staffId);
+    if (from) q.set('from', from);
+    if (to) q.set('to', to);
+    return fetchAPI(`/api/staff/schedule/export?${q.toString()}`);
+  },
+
+
   bookings: {
     create: (data: any) => fetchAPI("/api/bookings", { method: "POST", body: JSON.stringify(data) }),
     list: () => fetchAPI("/api/bookings"),

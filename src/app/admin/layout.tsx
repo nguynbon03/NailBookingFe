@@ -24,6 +24,8 @@ const sidebarLinks = [
   { href: "/admin/accounts", label: "Accounts", icon: UserCog },
   { href: "/admin/protection", label: "Protection", icon: ShieldCheck },
   { href: "/admin/promo-codes", label: "Promo", icon: Tags },
+  { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/admin/whatsapp", label: "WhatsApp", icon: User },
 ];
 
 const adminRoles = new Set(["ADMIN", "MANAGER"]);

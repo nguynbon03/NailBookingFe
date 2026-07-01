@@ -36,7 +36,7 @@ export default function RegisterPage() {
           <div className="text-center mb-6">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white mx-auto mb-4"><Sparkles size={28} /></div>
             <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
-            <p className="text-gray-500 text-sm mt-1">Verify your email once. Email and phone are checked before the account is created.</p>
+            <p className="text-gray-500 text-sm mt-1">Verify your email to sign in. Phone number is collected for booking contact. SMS/WhatsApp OTP is required only at booking step (anti-spam).</p>
           </div>
           {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm">{error}</div>}
           {message && <div className="mb-4 p-3 bg-emerald-50 text-emerald-700 rounded-xl text-sm flex gap-2"><ShieldCheck size={18} className="shrink-0 mt-0.5" />{message}</div>}
@@ -48,7 +48,6 @@ export default function RegisterPage() {
             <button type="submit" disabled={loading} className="btn-primary w-full py-3.5">{loading ? "Creating..." : "Create Account"}</button>
           </form>
           <p className="text-center text-sm text-gray-500 mt-4">Already verified? <Link href="/login" className="text-pink-600 font-semibold hover:underline">Sign In</Link></p>
-          <p className="text-center text-xs text-gray-400 mt-3">Need phone OTP? <Link href="/verify-phone" className="text-pink-600 font-semibold hover:underline">Verify by WhatsApp/SMS</Link></p>
         </div>
       </motion.div>
     </main></>
