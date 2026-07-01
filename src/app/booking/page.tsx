@@ -40,7 +40,7 @@ type Slot = { time: string; availableStaffCount: number; staffIds: string[] };
 export default function BookingPage() {
   const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
-  const [selectedService, setSelectedService] = useState("");
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [formData, setFormData] = useState({
@@ -105,7 +105,7 @@ export default function BookingPage() {
   }, [authLoading, user?.id, user?.email, user?.name, user?.phone]);
 
   const service = services.find((s) => s.id === selectedService || s.name === selectedService);
-  const basePrice = service ? service.price : 0;
+  const basePrice = selectedServiceObjects.reduce((sum, s) => sum + Number(s.price || 0), 0);
   const finalPrice = Math.max(0, basePrice - discount);
   const accountEmail = (user?.email || "").trim().toLowerCase();
   const bookingEmail = formData.email.trim().toLowerCase();
@@ -208,7 +208,7 @@ export default function BookingPage() {
         customerEmail: user?.email || formData.email,
         date: selectedDate,
         time: selectedTime,
-        serviceIds: service ? [service.id] : [],
+        serviceIds: selectedServices,
         numPeople,
         staffId: selectedStaff === "any" ? null : selectedStaff,
         notes: formData.notes,
@@ -231,7 +231,7 @@ export default function BookingPage() {
   };
 
   const canProceed =
-    (step === 1 && selectedService) ||
+    (step === 1 && selectedServices.length > 0) ||
     (step === 2 && selectedDate) ||
     (step === 3 && selectedTime) ||
     step === 4;
@@ -357,10 +357,10 @@ export default function BookingPage() {
                     {services.map((s) => (
                       <button
                         key={s.id}
-                        onClick={() => setSelectedService(s.id)}
+                        onClick={() => { setSelectedServices(prev => prev.includes(s.id) ? prev.filter(id => id !== s.id) : [...prev, s.id]); }}
                         className={cn(
                           "text-left p-4 rounded-2xl border transition-all flex items-center gap-3",
-                          selectedService === s.id
+                          selectedServices.includes(s.id) || selectedServices.includes(s.name)
                             ? "border-pink-400 bg-pink-50 shadow-md shadow-pink-100"
                             : "border-gray-100 bg-white hover:border-pink-200 hover:shadow-sm"
                         )}
@@ -641,7 +641,7 @@ export default function BookingPage() {
                   <div className="mt-6 bg-gradient-to-r from-pink-50 to-rose-50 rounded-2xl p-6 border border-pink-100">
                     <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><ShieldCheck size={18} /> Booking Summary</h4>
                     <div className="space-y-2 text-sm">
-                      <p className="flex justify-between"><span className="text-gray-500">Service:</span> <span className="font-medium">{service?.name}</span></p>
+                      <p className="flex justify-between"><span className="text-gray-500">Service:</span> <span className="font-medium">{selectedServiceObjects.length ? selectedServiceObjects.map(s => s.name).join(", ") : "Select service(s)"}</span></p>
                       <p className="flex justify-between">
                         <span className="text-gray-500">Price:</span>
                         <span className="font-bold text-pink-600">
