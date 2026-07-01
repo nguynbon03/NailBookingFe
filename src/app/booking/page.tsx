@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -468,7 +470,9 @@ export default function BookingPage() {
                   <h3 className="text-lg font-bold mb-5">Confirm Details</h3>
                   <div className="bg-white rounded-2xl p-6 shadow-sm border border-pink-100 space-y-5">
                     {/* Phone Verification - Beautiful Block */}
-                    <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 p-5 space-y-3 shadow-sm">
+                      {/* DEPLOY_MARKER_1782910591294 - NEW OTP IN BOOKING - IF YOU SEE THIS THE NEW CODE IS LIVE */}
+
+                    <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 p-5 space-y-3 shadow-sm" data-deploy-marker="1782910607965" data-otp-in-booking="true" >
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-bold text-amber-900 text-base">Please verify your phone number via WhatsApp or SMS OTP before booking</p>
