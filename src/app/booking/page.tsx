@@ -493,21 +493,21 @@ export default function BookingPage() {
                             <option value="sms">SMS</option>
                           </select>
                           <button onClick={sendOTPForBooking} disabled={otpLoading || !formData.phone} className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50">
-                            {otpLoading ? "Đang gửi..." : "Gửi mã OTP"}
+                            {otpLoading ? "Sending..." : "Send OTP Code"}
                           </button>
                         </div>
                       ) : (
                         <div className="space-y-2">
                           <div className="flex flex-wrap gap-2 items-center">
-                            <input value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))} placeholder="Nhập mã 6 số" maxLength={6} className="flex-1 min-w-[140px] px-4 py-2 rounded-xl border border-amber-300 bg-white text-sm font-mono tracking-[6px] text-center focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                            <input value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))} placeholder="Enter 6-digit code" maxLength={6} className="flex-1 min-w-[140px] px-4 py-2 rounded-xl border border-amber-300 bg-white text-sm font-mono tracking-[6px] text-center focus:outline-none focus:ring-2 focus:ring-amber-400" />
                             <button onClick={verifyOTPForBooking} disabled={otpLoading || otpCode.length < 4} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50">
-                              {otpLoading ? "Đang xác thực..." : "Xác thực mã"}
+                              {otpLoading ? "Verifying..." : "Verify Code"}
                             </button>
                             <button onClick={() => { setOtpSent(false); setOtpCode(""); setOtpError(""); }} className="px-4 py-2 rounded-xl border border-amber-300 bg-white text-sm text-amber-700 hover:bg-amber-100">
-                              Gửi lại
+                              Resend
                             </button>
                           </div>
-                          <p className="text-xs text-amber-700">Kiểm tra WhatsApp hoặc SMS của bạn để lấy mã.</p>
+                          <p className="text-xs text-amber-700">Check your WhatsApp or SMS for the code.</p>
                         </div>
                       )}
 
