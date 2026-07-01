@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { TrendingUp, CalendarDays, Package, Users, LogOut, Tags, UserCog, CalendarOff, ShieldCheck, Inbox, FileText, BarChart3 } from "lucide-react";
+import { TrendingUp, CalendarDays, Package, Users, LogOut, Tags, UserCog, CalendarOff, ShieldCheck, Inbox, FileText, BarChart3, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -25,7 +25,7 @@ const sidebarLinks = [
   { href: "/admin/protection", label: "Protection", icon: ShieldCheck },
   { href: "/admin/promo-codes", label: "Promo", icon: Tags },
   { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/admin/whatsapp", label: "WhatsApp", icon: User },
+  { href: "/admin/whatsapp", label: "WhatsApp", icon: UserIcon },
 ];
 
 const adminRoles = new Set(["ADMIN", "MANAGER"]);
