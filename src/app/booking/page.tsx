@@ -73,6 +73,7 @@ export default function BookingPage() {
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpMessage, setOtpMessage] = useState("");
+  const [bookingError, setBookingError] = useState<{ title: string; message: string } | null>(null);
 
   useEffect(() => {
     api.staff.list().then((d: any) => setStaffList(d.staff || [])).catch(() => {});
@@ -158,10 +159,13 @@ export default function BookingPage() {
   const handleNext = () => { if (step < 4) setStep(step + 1); };
   const handleBack = () => { if (step > 1) setStep(step - 1); };
 
-  
+  const showBookingError = (title: string, message: string) => {
+    setBookingError({ title, message });
+  };
+
   const sendOTPForBooking = async () => {
     const phone = formData.phone.trim();
-    if (!phone) { alert("Enter phone number first"); return; }
+    if (!phone) { showBookingError("Phone number required", "Enter your phone number first so we can send the OTP code."); return; }
     setOtpLoading(true); setOtpError("");
     try {
       await api.otp.send(phone, otpChannel);
@@ -213,16 +217,19 @@ export default function BookingPage() {
 
   const handleSubmit = async () => {
     if (!user) {
-      alert("Please sign in before booking online.");
+      showBookingError("Sign in required", "Please sign in before booking online.");
       window.location.href = "/login?next=/booking";
       return;
     }
     if (!emailMatchesAccount || !emailConfirmMatchesAccount || !emailValid) {
-      alert(accountUsesEmail ? "The booking email and confirmation email must both match your signed-in account email." : "The booking account and confirmation account must both match your signed-in account.");
+      showBookingError(
+        "Account check required",
+        accountUsesEmail ? "The booking email and confirmation email must both match your signed-in account email." : "The booking account and confirmation account must both match your signed-in account."
+      );
       return;
     }
     if (!formData.healthConfirmed || !formData.allergiesConfirmed || !formData.termsAccepted) {
-      alert("Please tick all health, allergy, and terms confirmations before submitting.");
+      showBookingError("Confirmations required", "Please tick all health, allergy, and terms confirmations before submitting.");
       return;
     }
     setLoading(true);
@@ -249,7 +256,11 @@ export default function BookingPage() {
       setBookingResult(result || null);
       setSubmitted(true);
     } catch (e: any) {
-      alert(e.message || "Booking failed");
+      const message = e.message || "Booking failed";
+      showBookingError(
+        message.toLowerCase().includes("booking limit") ? "Booking limit reached" : "Booking could not be submitted",
+        message
+      );
     } finally {
       setLoading(false);
     }
@@ -364,6 +375,31 @@ export default function BookingPage() {
 
   return (
     <>
+      {bookingError && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-950/60 px-4 py-8 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-labelledby="booking-error-title">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-xl rounded-[2rem] border-2 border-rose-200 bg-white p-6 sm:p-8 text-center shadow-2xl shadow-rose-950/30"
+          >
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+              <AlertCircle size={34} />
+            </div>
+            <h2 id="booking-error-title" className="text-2xl sm:text-3xl font-black text-gray-950">{bookingError.title}</h2>
+            <p className="mt-4 whitespace-pre-wrap break-words text-lg sm:text-xl font-bold leading-relaxed text-gray-700">{bookingError.message}</p>
+            {bookingError.message.toLowerCase().includes("booking limit") && (
+              <p className="mt-3 text-sm font-semibold text-gray-500">Please use a different verified phone number, wait until tomorrow, or contact the shop directly for help.</p>
+            )}
+            <button
+              type="button"
+              onClick={() => setBookingError(null)}
+              className="mt-7 w-full rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 px-6 py-4 text-base font-black text-white shadow-lg shadow-pink-200 transition hover:-translate-y-0.5 hover:shadow-xl"
+            >
+              I understand
+            </button>
+          </motion.div>
+        </div>
+      )}
       <Navbar />
       <main className="pt-16 min-h-screen bg-gradient-to-b from-pink-50/30 to-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
