@@ -511,7 +511,6 @@ export default function BookingPage() {
                       {otpMessage && <p className="text-emerald-700 text-xs font-semibold mt-1">{otpMessage}</p>}
                     </div>
 
-                    {/* Contact info */}
                                         {/* Contact info */}
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="relative">
