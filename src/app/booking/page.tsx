@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Clock, CalendarDays, User, Phone, Mail, MessageSquare,
   Check, Sparkles, Upload, Tag, ShieldCheck, Heart, Stethoscope, ImagePlus,
-  X, Star, AlertCircle
+  X, Star, AlertCircle, Users
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -48,6 +48,7 @@ export default function BookingPage() {
     promoCode: "", healthConfirmed: false, allergiesConfirmed: false, termsAccepted: false,
   });
   const [selectedStaff, setSelectedStaff] = useState("any");
+  const [numPeople, setNumPeople] = useState(1);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -208,6 +209,7 @@ export default function BookingPage() {
         date: selectedDate,
         time: selectedTime,
         serviceIds: service ? [service.id] : [],
+        numPeople,
         staffId: selectedStaff === "any" ? null : selectedStaff,
         notes: formData.notes,
         promoCode: formData.promoCode || null,
@@ -433,6 +435,31 @@ export default function BookingPage() {
                           </button>
                         ))}
                       </div>
+                    </div>
+
+                    
+                    {/* Multi-person / Group booking */}
+                    <div className="pt-4 border-t border-pink-100">
+                      <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <Users size={16} /> Number of people (group booking)
+                      </label>
+                      <div className="flex items-center gap-3">
+                        {[1,2,3,4,5,6].map(n => (
+                          <button
+                            key={n}
+                            onClick={() => setNumPeople(n)}
+                            className={cn(
+                              "px-4 py-2 rounded-xl border text-sm font-semibold transition",
+                              numPeople === n ? "bg-pink-600 text-white border-pink-600" : "border-pink-200 hover:bg-pink-50"
+                            )}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1.5">
+                        Giá sẽ nhân với số người (ví dụ: 5 người = 5× dịch vụ). Slot vẫn chỉ block 1 lần.
+                      </p>
                     </div>
 
                     <div>
