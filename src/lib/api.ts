@@ -40,9 +40,13 @@ export const api = {
   },
 
   availability: {
-    slots: (date: string, serviceId?: string, staffId?: string) => {
+    slots: (date: string, serviceIds?: string | string[], staffId?: string) => {
       const params = new URLSearchParams({ date });
-      if (serviceId) params.set("serviceId", serviceId);
+      if (Array.isArray(serviceIds)) {
+        if (serviceIds.length) params.set("serviceIds", serviceIds.join(","));
+      } else if (serviceIds) {
+        params.set("serviceId", serviceIds);
+      }
       if (staffId && staffId !== "any") params.set("staffId", staffId);
       return fetchAPI(`/api/availability?${params.toString()}`);
     },

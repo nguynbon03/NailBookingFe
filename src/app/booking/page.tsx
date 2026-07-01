@@ -42,7 +42,6 @@ export default function BookingPage() {
   const [step, setStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
-  const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [formData, setFormData] = useState({
@@ -62,6 +61,7 @@ export default function BookingPage() {
   const [submitted, setSubmitted] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<any | null>(null);
   const [verificationInfo, setVerificationInfo] = useState<any | null>(null);
+  const [notificationDelivery, setNotificationDelivery] = useState<any | null>(null);
   const [promoError, setPromoError] = useState("");
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
@@ -83,14 +83,14 @@ export default function BookingPage() {
         const saved = typeof window !== "undefined" ? localStorage.getItem("selectedService") : "";
         if (saved) {
           const match = live.find((s) => s.id === saved || s.name === saved);
-          if (match) setSelectedService(match.id);
+          if (match) setSelectedServices([match.id]);
         }
       }
     }).catch(() => {
       const saved = typeof window !== "undefined" ? localStorage.getItem("selectedService") : "";
       if (saved) {
         const match = services.find((s) => s.id === saved || s.name === saved);
-        if (match) setSelectedService(match.id);
+        if (match) setSelectedServices([match.id]);
       }
     });
   }, []);
@@ -106,10 +106,17 @@ export default function BookingPage() {
     }));
   }, [authLoading, user?.id, user?.email, user?.name, user?.phone]);
 
-  const service = services.find((s) => s.id === selectedService || s.name === selectedService);
+  const primaryServiceOptions = services.filter((s) => s.category !== "extras");
+  const addonServiceOptions = services.filter((s) => s.category === "extras");
   const selectedServiceObjects = services.filter((s) => selectedServices.includes(s.id) || selectedServices.includes(s.name));
   const selectedAddonObjects = services.filter((s) => selectedAddons.includes(s.id) || selectedAddons.includes(s.name));
-  const perPersonPrice = [...selectedServiceObjects, ...selectedAddonObjects].reduce((sum, s) => sum + Number(s.price || 0), 0);
+  const allSelectedServiceObjects = [...selectedServiceObjects, ...selectedAddonObjects].filter((service, index, array) =>
+    index === array.findIndex((item) => item.id === service.id)
+  );
+  const selectedServiceIdsForBooking = allSelectedServiceObjects.map((s) => s.id);
+  const selectedServiceKey = selectedServiceIdsForBooking.join("|");
+  const totalDuration = allSelectedServiceObjects.reduce((sum, s) => sum + Number(s.duration || 0), 0);
+  const perPersonPrice = allSelectedServiceObjects.reduce((sum, s) => sum + Number(s.price || 0), 0);
   const subtotalPrice = Math.round(perPersonPrice * numPeople * 100) / 100;
   const finalPrice = Math.max(0, subtotalPrice - discount);
   const accountEmail = (user?.email || "").trim().toLowerCase();
@@ -125,10 +132,10 @@ export default function BookingPage() {
     setNumPeople(1);
     setSlotsError("");
     setAvailableSlots([]);
-    if (!selectedDate || !service?.id) return;
+    if (!selectedDate || !selectedServiceIdsForBooking.length) return;
 
     setSlotsLoading(true);
-    api.availability.slots(selectedDate, service.id, selectedStaff)
+    api.availability.slots(selectedDate, selectedServiceIdsForBooking, selectedStaff)
       .then((d: any) => {
         setAvailableSlots(d.slots || []);
         if (!(d.slots || []).length) setSlotsError("No staff is free for this date. Please choose another date or staff.");
@@ -138,7 +145,7 @@ export default function BookingPage() {
         setSlotsError(err.message || "Could not load available slots");
       })
       .finally(() => setSlotsLoading(false));
-  }, [selectedDate, selectedStaff, service?.id]);
+  }, [selectedDate, selectedStaff, selectedServiceKey]);
 
   const selectedSlot = availableSlots.find((slot) => slot.time === selectedTime);
   const selectedSlotCapacity = Math.max(1, Number(selectedSlot?.availableStaffCount || 1));
@@ -226,7 +233,7 @@ export default function BookingPage() {
         customerEmail: user?.email || formData.email,
         date: selectedDate,
         time: selectedTime,
-        serviceIds: [...selectedServices, ...selectedAddons],
+        serviceIds: selectedServiceIdsForBooking,
         numPeople,
         staffId: selectedStaff === "any" ? null : selectedStaff,
         notes: formData.notes,
@@ -326,7 +333,7 @@ export default function BookingPage() {
                 </div>
                 <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-700 space-y-1 sm:col-span-2">
                   <p><span className="font-bold">Date:</span> {selectedDate} at {selectedTime}</p>
-                  <p><span className="font-bold">Services:</span> {selectedServiceObjects.map(s => s.name).join(", ") || service?.name}</p>
+                  <p><span className="font-bold">Services:</span> {allSelectedServiceObjects.map(s => s.name).join(", ") || "Selected service(s)"}</p>
                   <p><span className="font-bold">People:</span> {numPeople}</p>
                   <p><span className="font-bold">Email:</span> {formData.email}</p>
                 </div>
@@ -390,9 +397,10 @@ export default function BookingPage() {
             <AnimatePresence mode="wait">
               {step === 1 && (
                 <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                  <h3 className="text-lg font-bold mb-5">Select a Service</h3>
+                  <h3 className="text-lg font-bold mb-2">Select Service(s)</h3>
+                  <p className="text-sm text-gray-500 mb-5">You can choose multiple services for one appointment. We will calculate the total time and price before you confirm.</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {services.map((s) => (
+                    {primaryServiceOptions.map((s) => (
                       <button
                         key={s.id}
                         onClick={() => { setSelectedServices(prev => prev.includes(s.id) ? prev.filter(id => id !== s.id) : [...prev, s.id]); }}
@@ -422,15 +430,32 @@ export default function BookingPage() {
                       </button>
                     ))}
                   </div>
+                  {allSelectedServiceObjects.length > 0 && (
+                    <div className="mt-5 rounded-2xl border border-pink-100 bg-pink-50/60 p-4 text-sm text-gray-700">
+                      <p className="font-black text-gray-900 mb-2">Selected for this appointment</p>
+                      <div className="space-y-1">
+                        {allSelectedServiceObjects.map((item) => (
+                          <div key={item.id} className="flex justify-between gap-4">
+                            <span className="truncate">{item.name}</span>
+                            <span className="whitespace-nowrap font-bold text-pink-600">{formatPrice(item.price)} · {formatDuration(item.duration)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 border-t border-pink-100 pt-3 flex justify-between font-black">
+                        <span>Total per person</span>
+                        <span>{formatPrice(perPersonPrice)} · {formatDuration(totalDuration || 30)}</span>
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               )}
 
               {/* Add-ons / Upsell (Extras category) */}
-              {step === 1 && services.some(s => s.category === "extras") && (
+              {step === 1 && addonServiceOptions.length > 0 && (
                 <motion.div key="addons" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
                   <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><Sparkles size={18} className="text-amber-500" /> Add-ons (optional)</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    {services.filter(s => s.category === "extras").map((a) => (
+                    {addonServiceOptions.map((a) => (
                       <button
                         key={a.id}
                         type="button"
@@ -447,7 +472,7 @@ export default function BookingPage() {
                       </button>
                     ))}
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-1">Add-ons are added to your booking and price.</p>
+                  <p className="text-[11px] text-gray-400 mt-1">Add-ons are optional and are included in the total appointment time and price.</p>
                 </motion.div>
               )}
 
@@ -502,7 +527,7 @@ export default function BookingPage() {
                     </div>
 
                     <div>
-                      <p className="text-sm text-gray-500 mb-4">Available slots for {selectedDate}</p>
+                      <p className="text-sm text-gray-500 mb-4">Available slots for {selectedDate} · total service time: {formatDuration(totalDuration || 30)}</p>
                       {slotsLoading ? (
                         <div className="rounded-xl bg-gray-50 p-6 text-center text-gray-400">Checking staff availability...</div>
                       ) : slotsError ? (
@@ -715,8 +740,9 @@ export default function BookingPage() {
                   <div className="mt-6 bg-gradient-to-r from-pink-50 to-rose-50 rounded-2xl p-6 border border-pink-100">
                     <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><ShieldCheck size={18} /> Booking Summary</h4>
                     <div className="space-y-2 text-sm">
-                      <p className="flex justify-between"><span className="text-gray-500">Service:</span> <span className="font-medium">{selectedServiceObjects.length ? selectedServiceObjects.map(s => s.name).join(", ") : "Select service(s)"}</span></p>
-                      {selectedAddonObjects.length > 0 && <p className="flex justify-between"><span className="text-gray-500">Add-ons:</span> <span className="font-medium text-amber-600">{selectedAddonObjects.map(s => s.name).join(", ")}</span></p>}
+                      <p className="flex justify-between gap-4"><span className="text-gray-500">Services:</span> <span className="font-medium text-right">{selectedServiceObjects.length ? selectedServiceObjects.map(s => s.name).join(", ") : "Select service(s)"}</span></p>
+                      {selectedAddonObjects.length > 0 && <p className="flex justify-between gap-4"><span className="text-gray-500">Add-ons:</span> <span className="font-medium text-amber-600 text-right">{selectedAddonObjects.map(s => s.name).join(", ")}</span></p>}
+                      <p className="flex justify-between"><span className="text-gray-500">Total service time:</span> <span className="font-medium">{formatDuration(totalDuration || 30)}</span></p>
                       <p className="flex justify-between"><span className="text-gray-500">People:</span> <span className="font-medium">{numPeople}</span></p>
                       <p className="flex justify-between"><span className="text-gray-500">Price per person:</span> <span className="font-medium">{formatPrice(perPersonPrice)}</span></p>
                       <p className="flex justify-between">
