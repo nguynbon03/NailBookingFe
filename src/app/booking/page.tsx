@@ -475,7 +475,7 @@ export default function BookingPage() {
                     <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 p-5 space-y-3 shadow-sm" data-deploy-marker="1782910607965" data-otp-in-booking="true" >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-bold text-amber-900 text-base">Please verify your phone number via WhatsApp or SMS OTP before booking</p>
+                          <p className="font-bold text-amber-900 text-base">Please verify your phone number via WhatsApp or SMS OTP before booking <!-- OTP_VERIFY_BOOKING_LIVE v1782910799466 - IF YOU SEE THIS IN SOURCE THE NEW DEPLOY IS ACTIVE --></p>
                           <p className="text-xs text-amber-700 mt-0.5">This is required to prevent spam and fake bookings.</p>
                         </div>
                         {phoneVerified && (
