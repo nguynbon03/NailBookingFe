@@ -26,7 +26,7 @@ const sidebarLinks = [
   { href: "/admin/protection", label: "Protection", icon: ShieldCheck },
   { href: "/admin/promo-codes", label: "Promo", icon: Tags },
   { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/admin/google-sync", label: "Google Sync", icon: RefreshCw },
+  { href: "/admin/google-sync", label: "Calendar & Reports", icon: RefreshCw },
   { href: "/admin/whatsapp", label: "WhatsApp", icon: UserIcon },
 ];
 

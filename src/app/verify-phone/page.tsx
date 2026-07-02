@@ -68,7 +68,7 @@ export default function VerifyPhonePage() {
               <ShieldCheck size={32} />
             </div>
             <h1 className="text-3xl font-black text-gray-900">Secure Phone OTP</h1>
-            <p className="mt-2 text-sm text-gray-500">WhatsApp là kênh chính; SMS Infobip là fallback. Mã hết hạn sau 5 phút và bị rate limit để chống spam.</p>
+            <p className="mt-2 text-sm text-gray-500">WhatsApp is the primary channel. SMS is used only as a fallback. Codes expire after 5 minutes and are rate-limited to prevent spam.</p>
           </div>
 
           {message && <div className="mb-4 flex gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />{message}</div>}

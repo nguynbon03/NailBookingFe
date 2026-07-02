@@ -48,11 +48,10 @@ export default function AdminCalendar() {
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (e: any) {
       setErr(e.message || "Load failed");
-      // fallback demo data
-      setStaff([{ id: "demo", name: "Emma Linh", role: "Staff" }]);
-      setSchedule({ demo: [] });
-      setLeaves({ demo: [] });
-      setAvailability({ demo: [] });
+      setStaff([]);
+      setSchedule({});
+      setLeaves({});
+      setAvailability({});
     } finally {
       setLoading(false);
     }
@@ -78,7 +77,8 @@ export default function AdminCalendar() {
   const leavesForDay = (items: Leave[], day: string) => items.filter((item) => item.startDate.slice(0, 10) <= day && item.endDate.slice(0, 10) >= day);
   const freeHoursForDay = (items: Availability[], day: string) => {
     const weekday = new Date(day + "T00:00:00").getDay();
-    return items.filter((item) => item.date ? item.date.slice(0, 10) === day : item.dayOfWeek === weekday);
+    const slots = items.filter((item) => item.date ? item.date.slice(0, 10) === day : item.dayOfWeek === weekday);
+    return Array.from(new Map(slots.map((slot) => [`${slot.date || "weekly"}-${slot.dayOfWeek ?? "date"}-${slot.startTime}-${slot.endTime}`, slot])).values());
   };
 
   return (
@@ -86,17 +86,17 @@ export default function AdminCalendar() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-black flex items-center gap-2">
-            <CalendarDays /> Staff Appointment Calendar
+            <CalendarDays /> Staff Calendar
           </h1>
-          <p className="text-sm text-gray-500">2-way view • Export ICS • Last refresh: {lastUpdated || "—"}</p>
-          {err && <p className="text-xs text-red-600 mt-1">Error: {err} (showing demo)</p>}
+          <p className="text-sm text-gray-500">Availability is shown only after staff add their own working hours. Last refresh: {lastUpdated || "—"}</p>
+          {err && <p className="text-xs text-red-600 mt-1">Error: {err}</p>}
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="px-4 py-2 border rounded-xl flex items-center gap-2 text-sm">
             <RefreshCw size={16} /> Refresh
           </button>
           <button onClick={() => exportICS()} className="px-4 py-2 bg-emerald-600 text-white rounded-xl flex items-center gap-2 text-sm">
-            <Download size={16} /> Export All ICS
+            <Download size={16} /> Export calendar file
           </button>
         </div>
       </div>
@@ -126,7 +126,7 @@ export default function AdminCalendar() {
                     <User size={18} /> {s.name} <span className="text-xs text-gray-400">({s.role || "Staff"})</span>
                   </div>
                   <button onClick={() => exportICS(s.id)} className="text-xs px-3 py-1 border rounded-lg flex items-center gap-1">
-                    <Download size={14} /> Export ICS
+                    <Download size={14} /> Export file
                   </button>
                 </div>
 
@@ -141,8 +141,8 @@ export default function AdminCalendar() {
                           {new Date(day + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
                         </div>
                         <div className="mb-2 space-y-1">
-                          {dayFree.length === 0 ? <div className="text-[11px] text-gray-400 italic">No free-hours setup</div> : dayFree.map((slot) => (
-                            <div key={slot.id} className="rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">Free {slot.startTime}-{slot.endTime}</div>
+                          {dayFree.length === 0 ? <div className="text-[11px] text-gray-400 italic">No availability added by staff</div> : dayFree.map((slot) => (
+                            <div key={slot.id} className="rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">Available {slot.startTime}-{slot.endTime}</div>
                           ))}
                           {dayLeaves.map((leave) => (
                             <div key={leave.id} className={`rounded-lg px-2 py-1 text-[11px] font-black ${leave.status === "APPROVED" ? "bg-red-50 text-red-700" : leave.status === "REJECTED" ? "bg-gray-100 text-gray-500" : "bg-amber-50 text-amber-700"}`}>Leave {leave.status}: {leave.reason}</div>
@@ -170,7 +170,7 @@ export default function AdminCalendar() {
 
           {schedule.unassigned && schedule.unassigned.length > 0 && (
             <div className="border rounded-3xl p-5 bg-amber-50">
-              <div className="font-bold mb-2">Unassigned / Pending</div>
+              <div className="font-bold mb-2">Open / unassigned bookings</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {schedule.unassigned.map((b: Booking, i: number) => (
                   <div key={i} className="p-2 bg-white rounded-xl border text-xs">

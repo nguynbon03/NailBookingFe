@@ -95,7 +95,7 @@ export default function AdminReportsPage() {
     try {
       const result = await api.admin.sendRevenueAction({ action: "sendDailySms", period: "day", date, phone });
       if (result.delivery?.sent > 0) setNotice(`Daily revenue SMS sent to ${result.recipient}.`);
-      else setNotice(`Daily SMS queued but not sent: ${result.delivery?.sms?.error || "SMS provider not configured"}. Add Twilio env to send real SMS.`);
+      else setNotice("Daily SMS is not available yet. Please use email delivery for now.");
     } catch (err: any) {
       setError(err.message || "Could not send daily SMS");
     } finally {
@@ -109,7 +109,7 @@ export default function AdminReportsPage() {
     setNotice("");
     try {
       const result = await api.admin.sendRevenueAction({ action: "sendMonthlyEmail", period: "month", date, email });
-      setNotice(`Monthly PDF report sent to ${result.recipient} via ${result.delivery?.provider || "email"}.`);
+      setNotice(`Monthly PDF report sent to ${result.recipient}.`);
     } catch (err: any) {
       setError(err.message || "Could not send monthly email");
     } finally {
@@ -180,9 +180,9 @@ export default function AdminReportsPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-4 sm:gap-6 mb-4 sm:mb-6">
         <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-3"><Banknote size={18} className="text-emerald-500" /><h3 className="font-black text-gray-900">Bank statement / Open Banking feed</h3></div>
+          <div className="flex items-center gap-2 mb-3"><Banknote size={18} className="text-emerald-500" /><h3 className="font-black text-gray-900">Bank statement import</h3></div>
           <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-sm text-gray-600 mb-3">
-            <b>Status:</b> {openBanking?.configured ? `Open Banking configured (${openBanking.provider})` : "Manual bank statement import active"}. {openBanking?.note}
+            <b>Status:</b> {openBanking?.configured ? "Bank connection enabled" : "Manual bank statement import active"}. {openBanking?.note}
           </div>
           <textarea value={statementCsv} onChange={(e) => setStatementCsv(e.target.value)} className="w-full min-h-40 rounded-2xl border border-gray-200 p-3 text-sm font-mono outline-none focus:ring-2 focus:ring-pink-200" placeholder={'Paste CSV bank statement here: Date,Description,Reference,Amount\n2026-06-30,Nail Lounge NL-ABC12345,NL-ABC12345,45.00'} />
           <div className="mt-3 flex flex-wrap gap-2">
@@ -199,7 +199,7 @@ export default function AdminReportsPage() {
           <label className="text-xs font-black uppercase text-gray-400">Monthly PDF email</label>
           <input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 mb-3 h-11 w-full rounded-xl border border-gray-200 px-3 text-sm font-bold outline-none focus:ring-2 focus:ring-pink-200" placeholder="owner@email.com" />
           <button onClick={sendMonthlyEmail} disabled={busy === "email"} className="h-11 w-full rounded-xl bg-gray-900 text-white text-sm font-black inline-flex items-center justify-center gap-2 disabled:opacity-50"><Mail size={16} />{busy === "email" ? "Sending..." : "Email monthly PDF"}</button>
-          <p className="text-xs text-gray-400 mt-3">Automatic 8:30 daily SMS uses the secure cron endpoint after REPORT_CRON_SECRET and Twilio env are configured.</p>
+          <p className="text-xs text-gray-400 mt-3">Automatic delivery is managed from Calendar & Reports. Keep the owner's email saved there.</p>
         </div>
       </div>
 
