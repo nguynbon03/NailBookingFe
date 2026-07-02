@@ -44,6 +44,21 @@ function todayISO() {
   return d.toISOString().slice(0, 10);
 }
 
+function nextMondayISO() {
+  const d = new Date();
+  const day = d.getDay();
+  const add = day === 0 ? 1 : 8 - day;
+  d.setDate(d.getDate() + add);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+}
+
+function addDaysISO(value: string, daysToAdd: number) {
+  const d = new Date(value + "T00:00:00");
+  d.setDate(d.getDate() + daysToAdd);
+  return d.toISOString().slice(0, 10);
+}
+
 function bookingServices(booking: Booking) {
   return (booking.services || []).map((item) => item.service?.name).filter(Boolean).join(", ") || "Service";
 }
@@ -78,6 +93,9 @@ export default function StaffPortalPage() {
   const [availability, setAvailability] = useState<Availability[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [form, setForm] = useState(emptyAvailability);
+  const [weekStart, setWeekStart] = useState(nextMondayISO());
+  const [weekSelected, setWeekSelected] = useState<Record<string, boolean>>({});
+  const [weekHours, setWeekHours] = useState({ startTime: "09:00", endTime: "18:00" });
   const [leaveForm, setLeaveForm] = useState({ startDate: todayISO(), endDate: todayISO(), reason: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -87,6 +105,7 @@ export default function StaffPortalPage() {
 
   const allowed = user && ["STAFF", "ADMIN", "MANAGER"].includes(user.role);
   const pendingLeaves = leaveRequests.filter((item) => item.status === "PENDING").length;
+  const weekDays = Array.from({ length: 7 }, (_, index) => addDaysISO(weekStart, index));
 
   const refresh = () => {
     setError("");
@@ -161,6 +180,27 @@ export default function StaffPortalPage() {
       refresh();
     } catch (err: any) {
       setError(err.message || "Could not save availability");
+    }
+  };
+
+  const saveWeeklyAvailability = async () => {
+    const selectedDates = weekDays.filter((day) => weekSelected[day]);
+    if (!selectedDates.length) {
+      setError("Tick at least one working day for the week");
+      return;
+    }
+    try {
+      await Promise.all(selectedDates.map((date) => api.staff.createAvailability({
+        dayOfWeek: null,
+        date,
+        startTime: weekHours.startTime,
+        endTime: weekHours.endTime,
+        active: true,
+      })));
+      setWeekSelected({});
+      refresh();
+    } catch (err: any) {
+      setError(err.message || "Could not save weekly availability");
     }
   };
 
@@ -292,7 +332,26 @@ export default function StaffPortalPage() {
               </section>
 
               <section className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-pink-100 shadow-sm">
-                <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-4">My Free Hours</h2>
+                <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-2">Weekly Working Availability</h2>
+                <p className="text-xs text-gray-500 mb-4">Before a new week starts, tick the exact dates you can work. Days off should be submitted as leave tickets above so Admin sees the reason on the same calendar day.</p>
+                <div className="mb-4 grid grid-cols-1 gap-3">
+                  <div><label className="block text-sm font-semibold text-gray-700 mb-1">Week starts</label><input type="date" className="w-full min-h-11 p-3 rounded-xl border border-pink-200" value={weekStart} onChange={(e) => { setWeekStart(e.target.value); setWeekSelected({}); }} /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="block text-sm font-semibold text-gray-700 mb-1">Start</label><input type="time" className="w-full min-h-11 p-3 rounded-xl border border-pink-200" value={weekHours.startTime} onChange={(e) => setWeekHours({ ...weekHours, startTime: e.target.value })} /></div>
+                    <div><label className="block text-sm font-semibold text-gray-700 mb-1">End</label><input type="time" className="w-full min-h-11 p-3 rounded-xl border border-pink-200" value={weekHours.endTime} onChange={(e) => setWeekHours({ ...weekHours, endTime: e.target.value })} /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {weekDays.map((day) => (
+                      <button key={day} type="button" onClick={() => setWeekSelected((current) => ({ ...current, [day]: !current[day] }))} className={`rounded-2xl border p-3 text-left text-xs font-black ${weekSelected[day] ? "border-pink-300 bg-pink-50 text-pink-700" : "border-gray-100 bg-gray-50 text-gray-500"}`}>
+                        <span className="block">{new Date(day + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" })}</span>
+                        <span className="text-[11px] font-semibold">{day}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={saveWeeklyAvailability} className="btn-primary w-full min-h-11 inline-flex justify-center items-center gap-2"><Plus size={16} />Save selected week days</button>
+                </div>
+
+                <h3 className="text-base font-black text-gray-900 mb-3">Single Free Slot</h3>
                 <div className="space-y-3 mb-4">
                   <label className="block text-sm font-semibold text-gray-700">Repeat every</label>
                   <select className="w-full min-h-11 p-3 rounded-xl border border-pink-200" value={form.dayOfWeek} onChange={(e) => setForm({ ...form, dayOfWeek: e.target.value, date: "" })}>{days.map((d, i) => <option key={d} value={i}>{d}</option>)}</select>

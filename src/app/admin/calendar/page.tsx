@@ -7,12 +7,16 @@ const API = "https://bookingnail.overpowers.agency";
 
 type Staff = { id: string; name: string; role?: string };
 type Booking = { id: string; customerName: string; date: string; time: string; status: string; customerPhone?: string };
+type Leave = { id: string; startDate: string; endDate: string; reason: string; status: string; daysCount: number; managerNote?: string | null };
+type Availability = { id: string; dayOfWeek: number | null; date: string | null; startTime: string; endTime: string; active: boolean };
 
 export const dynamic = "force-dynamic";
 
 export default function AdminCalendar() {
   const [staff, setStaff] = useState<Staff[]>([]);
-  const [schedule, setSchedule] = useState<any>({});
+  const [schedule, setSchedule] = useState<Record<string, Booking[]>>({});
+  const [leaves, setLeaves] = useState<Record<string, Leave[]>>({});
+  const [availability, setAvailability] = useState<Record<string, Availability[]>>({});
   const [from, setFrom] = useState(new Date().toISOString().slice(0, 10));
   const [to, setTo] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 6); return d.toISOString().slice(0, 10); });
   const [loading, setLoading] = useState(true);
@@ -39,12 +43,16 @@ export default function AdminCalendar() {
       const json = await res.json();
       setStaff(json.staff || []);
       setSchedule(json.schedule || {});
+      setLeaves(json.leaves || {});
+      setAvailability(json.availability || {});
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (e: any) {
       setErr(e.message || "Load failed");
       // fallback demo data
       setStaff([{ id: "demo", name: "Emma Linh", role: "Staff" }]);
       setSchedule({ demo: [] });
+      setLeaves({ demo: [] });
+      setAvailability({ demo: [] });
     } finally {
       setLoading(false);
     }
@@ -56,11 +64,22 @@ export default function AdminCalendar() {
     window.open(`${API}/api/staff/schedule/export?from=${from}&to=${to}${sid ? `&staffId=${sid}` : ""}`, "_blank");
   };
 
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(from);
-    d.setDate(d.getDate() + i);
-    return d.toISOString().slice(0, 10);
-  });
+  const days = (() => {
+    const startDay = new Date(from + "T00:00:00");
+    const endDay = new Date(to + "T00:00:00");
+    const total = Math.max(1, Math.min(31, Math.floor((endDay.getTime() - startDay.getTime()) / 86400000) + 1));
+    return Array.from({ length: total }, (_, i) => {
+      const d = new Date(startDay);
+      d.setDate(d.getDate() + i);
+      return d.toISOString().slice(0, 10);
+    });
+  })();
+
+  const leavesForDay = (items: Leave[], day: string) => items.filter((item) => item.startDate.slice(0, 10) <= day && item.endDate.slice(0, 10) >= day);
+  const freeHoursForDay = (items: Availability[], day: string) => {
+    const weekday = new Date(day + "T00:00:00").getDay();
+    return items.filter((item) => item.date ? item.date.slice(0, 10) === day : item.dayOfWeek === weekday);
+  };
 
   return (
     <div className="p-6">
@@ -114,13 +133,23 @@ export default function AdminCalendar() {
                 <div className="grid grid-cols-1 md:grid-cols-7 gap-2 text-xs">
                   {days.map((day) => {
                     const dayB = bks.filter((b) => b.date?.slice(0, 10) === day);
+                    const dayLeaves = leavesForDay(leaves[s.id] || [], day);
+                    const dayFree = freeHoursForDay(availability[s.id] || [], day);
                     return (
-                      <div key={day} className="border rounded-2xl p-2 bg-gray-50 min-h-[110px]">
+                      <div key={day} className="border rounded-2xl p-2 bg-gray-50 min-h-[150px]">
                         <div className="font-semibold text-pink-600 mb-1">
-                          {new Date(day).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                          {new Date(day + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                        </div>
+                        <div className="mb-2 space-y-1">
+                          {dayFree.length === 0 ? <div className="text-[11px] text-gray-400 italic">No free-hours setup</div> : dayFree.map((slot) => (
+                            <div key={slot.id} className="rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">Free {slot.startTime}-{slot.endTime}</div>
+                          ))}
+                          {dayLeaves.map((leave) => (
+                            <div key={leave.id} className={`rounded-lg px-2 py-1 text-[11px] font-black ${leave.status === "APPROVED" ? "bg-red-50 text-red-700" : leave.status === "REJECTED" ? "bg-gray-100 text-gray-500" : "bg-amber-50 text-amber-700"}`}>Leave {leave.status}: {leave.reason}</div>
+                          ))}
                         </div>
                         {dayB.length === 0 ? (
-                          <div className="text-gray-400 italic">Free</div>
+                          <div className="text-gray-400 italic">No bookings</div>
                         ) : (
                           dayB.map((b, idx) => (
                             <div key={idx} className="mb-1 p-1.5 bg-white rounded-xl border text-[11px]">

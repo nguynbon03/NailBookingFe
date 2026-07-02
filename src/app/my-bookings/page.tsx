@@ -46,9 +46,13 @@ type Booking = {
   services?: { service: { name: string; image?: string | null; price: number; duration: number } }[];
 };
 
+type CustomerNotification = { id: string; title: string; message: string; read: boolean; createdAt: string; type: string };
+
 export default function MyBookingsPage() {
   const { user, loading: authLoading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [websiteNotifications, setWebsiteNotifications] = useState<CustomerNotification[]>([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -64,6 +68,15 @@ export default function MyBookingsPage() {
       .finally(() => setLoading(false));
   };
 
+  const refreshNotifications = () => {
+    api.notifications.list(undefined, 20)
+      .then((data: any) => {
+        setWebsiteNotifications(data.notifications || []);
+        setUnreadNotifications(Number(data.unread || 0));
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -71,7 +84,13 @@ export default function MyBookingsPage() {
       return;
     }
     refresh();
-  }, [authLoading, user]);
+    refreshNotifications();
+    const timer = window.setInterval(() => {
+      refresh();
+      refreshNotifications();
+    }, 10000);
+    return () => window.clearInterval(timer);
+  }, [authLoading, user?.id]);
 
   const submitCancelRequest = async () => {
     if (!cancelTarget || !cancelReason.trim()) {
@@ -109,6 +128,30 @@ export default function MyBookingsPage() {
           </div>
 
           {message && <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">{message}</div>}
+          {websiteNotifications.length > 0 && (
+            <div className="mb-5 rounded-3xl border border-pink-100 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-black text-gray-900">Live website notifications</h2>
+                  <p className="text-xs text-gray-500">This panel refreshes every 10 seconds. Email notifications are sent in parallel.</p>
+                </div>
+                {unreadNotifications > 0 && <span className="rounded-full bg-pink-600 px-3 py-1 text-xs font-black text-white">{unreadNotifications} unread</span>}
+              </div>
+              <div className="grid gap-2">
+                {websiteNotifications.slice(0, 5).map((item) => (
+                  <div key={item.id} className={`rounded-2xl border p-3 text-sm ${item.read ? "border-gray-100 bg-gray-50" : "border-pink-100 bg-pink-50"}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-black text-gray-900">{item.title}</p>
+                        <p className="mt-1 text-xs leading-5 text-gray-600">{item.message}</p>
+                      </div>
+                      <span className="shrink-0 text-[11px] font-bold text-gray-400">{new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {loading || authLoading ? (
             <div className="bg-white rounded-3xl border border-pink-100 p-10 text-center text-gray-400">Loading your bookings...</div>
           ) : error ? (

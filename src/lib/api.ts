@@ -154,6 +154,8 @@ export const api = {
     updatePromoCode: (data: any) => fetchAPI("/api/admin/promo-codes", { method: "PUT", body: JSON.stringify(data) }),
     deletePromoCode: (id: string) => fetchAPI("/api/admin/promo-codes", { method: "DELETE", body: JSON.stringify({ id }) }),
     accounts: () => fetchAPI("/api/admin/accounts"),
+    updateAccount: (id: string, data: { newPassword?: string; role?: string }) =>
+      fetchAPI("/api/admin/accounts", { method: "PUT", body: JSON.stringify({ id, ...data }) }),
     resetPassword: (id: string, newPassword: string) =>
       fetchAPI("/api/admin/accounts", { method: "PUT", body: JSON.stringify({ id, newPassword }) }),
     deleteAccount: (id: string) => fetchAPI("/api/admin/accounts", { method: "DELETE", body: JSON.stringify({ id }) }),

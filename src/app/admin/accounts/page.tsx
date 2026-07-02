@@ -39,6 +39,7 @@ export default function AdminAccounts() {
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("all");
   const [resettingId, setResettingId] = useState<string | null>(null);
+  const [roleBusyId, setRoleBusyId] = useState<string | null>(null);
   const [passwords, setPasswords] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -65,12 +66,28 @@ export default function AdminAccounts() {
 
   const canResetAccount = (account: Account) => {
     if (user?.role === "ADMIN") return true;
-    return !["ADMIN", "MANAGER"].includes(account.role);
+    return account.role !== "ADMIN";
+  };
+
+  const canChangeRole = (account: Account) => {
+    if (user?.role === "ADMIN") return true;
+    return account.role !== "ADMIN";
+  };
+
+  const allowedRoleOptions = (account: Account) => {
+    const roles = ["CUSTOMER", "STAFF", "MANAGER", "ADMIN"];
+    return user?.role === "ADMIN" ? roles : roles.filter((item) => item !== "ADMIN" || account.role === "ADMIN");
+  };
+
+  const canDeleteAccount = (account: Account) => {
+    if (account.id === user?.id) return false;
+    if (user?.role === "ADMIN") return true;
+    return account.role !== "ADMIN";
   };
 
   const resetPassword = async (account: Account) => {
     if (!canResetAccount(account)) {
-      setError("Only ADMIN can reset ADMIN/MANAGER accounts");
+      setError("Manager cannot edit ADMIN accounts");
       return;
     }
     const newPassword = passwords[account.id] || "";
@@ -93,13 +110,33 @@ export default function AdminAccounts() {
     }
   };
 
-  const deleteAccount = async (account: Account) => {
-    if (user?.role !== "ADMIN") {
-      setError("Only ADMIN can delete accounts");
+  const updateRole = async (account: Account, nextRole: string) => {
+    if (nextRole === account.role) return;
+    if (!canChangeRole(account)) {
+      setError("Manager cannot edit ADMIN accounts");
       return;
     }
-    if (account.id === user?.id) {
-      setError("You cannot delete your own account");
+    if (nextRole === "ADMIN" && user?.role !== "ADMIN") {
+      setError("Only ADMIN can promote accounts to ADMIN");
+      return;
+    }
+    setError("");
+    setMessage("");
+    setRoleBusyId(account.id);
+    try {
+      const result = await api.admin.updateAccount(account.id, { role: nextRole });
+      setAccounts((items) => items.map((item) => item.id === account.id ? { ...item, role: result.account?.role || nextRole } : item));
+      setMessage(`Role updated for ${account.email}`);
+    } catch (err: any) {
+      setError(err.message || "Failed to update account role");
+    } finally {
+      setRoleBusyId(null);
+    }
+  };
+
+  const deleteAccount = async (account: Account) => {
+    if (!canDeleteAccount(account)) {
+      setError(account.role === "ADMIN" ? "Manager cannot delete ADMIN accounts" : "You cannot delete your own account");
       return;
     }
     if (!window.confirm(`Delete account ${account.email}? Existing bookings are kept but detached from this login.`)) return;
@@ -167,7 +204,11 @@ export default function AdminAccounts() {
                   {filtered.map((account) => (
                     <tr key={account.id} className="hover:bg-pink-50/30">
                       <td className="px-3 py-2 max-w-[260px]"><div className="font-black text-gray-900 truncate">{account.name}</div><div className="text-xs text-gray-400 truncate">{account.email}</div></td>
-                      <td className="px-3 py-2"><span className={`px-2 py-1 rounded-full text-xs font-black ${roleClass[account.role] || "bg-gray-100 text-gray-600"}`}>{account.role}</span></td>
+                      <td className="px-3 py-2">
+                        <select value={account.role} onChange={(e) => updateRole(account, e.target.value)} disabled={!canChangeRole(account) || roleBusyId === account.id} className={`rounded-xl border border-gray-200 px-2 py-1 text-xs font-black outline-none disabled:opacity-50 ${roleClass[account.role] || "bg-gray-100 text-gray-600"}`}>
+                          {allowedRoleOptions(account).map((item) => <option key={item} value={item}>{item}</option>)}
+                        </select>
+                      </td>
                       <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{account.phone || "-"}</td>
                       <td className="px-3 py-2 text-gray-600">{account.staffProfile ? `${account.staffProfile.name} · ${account.staffProfile.active ? "Active" : "Inactive"}` : "-"}</td>
                       <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{shortDate(account.createdAt)}</td>
@@ -178,7 +219,7 @@ export default function AdminAccounts() {
                         </div>
                       </td>
                       <td className="px-3 py-2">
-                        <button onClick={() => deleteAccount(account)} disabled={user?.role !== "ADMIN" || account.id === user?.id} className="h-9 w-9 rounded-xl bg-red-50 text-red-600 inline-flex items-center justify-center hover:bg-red-100 disabled:bg-gray-100 disabled:text-gray-300" title="Delete account"><Trash2 size={15} /></button>
+                        <button onClick={() => deleteAccount(account)} disabled={!canDeleteAccount(account)} className="h-9 w-9 rounded-xl bg-red-50 text-red-600 inline-flex items-center justify-center hover:bg-red-100 disabled:bg-gray-100 disabled:text-gray-300" title="Delete account"><Trash2 size={15} /></button>
                       </td>
                     </tr>
                   ))}
@@ -197,6 +238,12 @@ export default function AdminAccounts() {
                     {account.phone && <div className="text-xs text-gray-400 truncate flex items-center gap-1 mt-1"><Phone size={12} />{account.phone}</div>}
                   </div>
                   <span className={`px-2 py-1 rounded-full text-[10px] font-black ${roleClass[account.role] || "bg-gray-100 text-gray-600"}`}>{account.role}</span>
+                </div>
+                <div className="mb-3 grid grid-cols-[1fr_auto] gap-2">
+                  <select value={account.role} onChange={(e) => updateRole(account, e.target.value)} disabled={!canChangeRole(account) || roleBusyId === account.id} className="min-h-10 rounded-xl border border-gray-200 px-3 text-xs font-black outline-none disabled:bg-gray-100 disabled:text-gray-400">
+                    {allowedRoleOptions(account).map((item) => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                  <button onClick={() => deleteAccount(account)} disabled={!canDeleteAccount(account)} className="h-10 w-10 rounded-xl bg-red-50 text-red-600 inline-flex items-center justify-center disabled:bg-gray-100 disabled:text-gray-300"><Trash2 size={15} /></button>
                 </div>
                 <div className="flex flex-wrap gap-2 text-[11px] text-gray-500 mb-3">
                   <span className="inline-flex items-center gap-1"><ShieldCheck size={12} />Created {shortDate(account.createdAt)}</span>
