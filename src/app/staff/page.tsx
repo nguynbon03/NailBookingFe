@@ -280,12 +280,14 @@ export default function StaffPortalPage() {
       api.staff.leaves().catch(() => ({ leaveRequests: [] })),
     ])
       .then(([dashboard, notificationData, availabilityData, leaveData]: any[]) => {
+        const slots = availabilityData.availability || [];
         setAvailableBookings(dashboard.availableBookings || []);
         setMyBookings(dashboard.myBookings || []);
         setHistoryBookings(dashboard.historyBookings || []);
         setNotifications(notificationData.notifications || []);
-        setAvailability(availabilityData.availability || []);
+        setAvailability(slots);
         setLeaveRequests(leaveData.leaveRequests || []);
+        setView((current) => (current === "requests" && slots.length === 0 ? "availability" : current));
       })
       .catch((err: any) => setError(err.message || "Could not load staff portal"))
       .finally(() => setLoading(false));
@@ -494,7 +496,7 @@ export default function StaffPortalPage() {
 
               {view === "availability" && (
                 <div className="grid gap-5 2xl:grid-cols-[1fr_420px]">
-                  <Section title="Weekly working availability" subtitle="Before a new week starts, tick the exact dates you can work. These hours appear on the owner calendar.">
+                  <Section title="Weekly working hours" subtitle="Tick the exact days you can work this week, then save one set of hours for those selected dates.">
                     <div className="grid gap-3 sm:grid-cols-[1fr_150px_150px]">
                       <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Week starts</span><input type="date" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={weekStart} onChange={(e) => { setWeekStart(e.target.value); setWeekSelected({}); }} /></label>
                       <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Start</span><input type="time" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={weekHours.startTime} onChange={(e) => setWeekHours({ ...weekHours, startTime: e.target.value })} /></label>
@@ -511,7 +513,7 @@ export default function StaffPortalPage() {
                     <button onClick={saveWeeklyAvailability} disabled={saving} className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-pink-600 px-4 text-sm font-black text-white hover:bg-pink-700 disabled:opacity-50"><Plus size={16} />Save selected week days</button>
                   </Section>
 
-                  <Section title="Single free slot" subtitle="Add one repeated weekday or one specific date.">
+                  <Section title="One extra slot" subtitle="Use this only when you need one extra repeat day or one specific date outside your weekly ticks.">
                     <div className="space-y-3">
                       <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Repeat every</span><select className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.dayOfWeek} onChange={(e) => setForm({ ...form, dayOfWeek: e.target.value, date: "" })}>{days.map((d, i) => <option key={d} value={i}>{d}</option>)}</select></label>
                       <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Or specific date</span><input type="date" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></label>
@@ -524,7 +526,7 @@ export default function StaffPortalPage() {
                   </Section>
 
                   <Section title="Saved availability" subtitle="Remove slots you no longer want to offer.">
-                    {availability.length === 0 ? <EmptyState title="No availability added" text="Add working slots so owner and customers can see when you can take bookings." /> : <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{availability.map((item) => <div key={item.id} className="flex items-center justify-between gap-2 rounded-2xl bg-gray-50 p-3 text-sm"><span className="truncate font-bold text-gray-700">{item.date ? shortDate(item.date) : days[item.dayOfWeek ?? 0]} · {item.startTime}-{item.endTime}</span><button onClick={() => deleteAvailability(item.id)} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-500"><Trash size={15} /></button></div>)}</div>}
+                    {availability.length === 0 ? <EmptyState title="No working hours saved yet" text="Tick the days you can work first so the owner calendar only shows real staff availability." /> : <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{availability.map((item) => <div key={item.id} className="flex items-center justify-between gap-2 rounded-2xl bg-gray-50 p-3 text-sm"><span className="truncate font-bold text-gray-700">{item.date ? shortDate(item.date) : days[item.dayOfWeek ?? 0]} · {item.startTime}-{item.endTime}</span><button onClick={() => deleteAvailability(item.id)} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-500"><Trash size={15} /></button></div>)}</div>}
                   </Section>
                 </div>
               )}
@@ -547,7 +549,7 @@ export default function StaffPortalPage() {
               )}
 
               {view === "notifications" && (
-                <Section title="Notifications" subtitle="Booking changes, leave decisions and replacement alerts." action={<button onClick={markNotificationsRead} className="inline-flex h-10 items-center gap-2 rounded-2xl bg-gray-900 px-3 text-sm font-black text-white"><Bell size={15} />Mark all read</button>}>
+                <Section title="Notifications" subtitle="Only updates linked to your own leave tickets or your own assigned bookings appear here." action={<button onClick={markNotificationsRead} className="inline-flex h-10 items-center gap-2 rounded-2xl bg-gray-900 px-3 text-sm font-black text-white"><Bell size={15} />Mark all read</button>}>
                   {notifications.length === 0 ? <EmptyState title="No notifications" text="Important booking and leave updates will appear here." /> : <div className="grid gap-3 lg:grid-cols-2">{notifications.map((n) => <div key={n.id} className={`rounded-3xl border p-4 ${n.read ? "border-gray-100 bg-white" : "border-pink-100 bg-pink-50"}`}><div className="flex items-start justify-between gap-3"><div><p className="font-black text-gray-950">{n.title}</p><p className="mt-1 text-sm leading-6 text-gray-600">{n.message}</p></div>{!n.read && <span className="rounded-full bg-pink-600 px-2 py-1 text-[10px] font-black text-white">NEW</span>}</div><p className="mt-3 text-xs font-bold text-gray-400">{longDateTime(n.createdAt)}</p></div>)}</div>}
                 </Section>
               )}
