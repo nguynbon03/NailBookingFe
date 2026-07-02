@@ -1,9 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
-type Message = { role: "user" | "assistant"; content: string };
+type Message = { role: "user" | "assistant"; content: string; imageUrl?: string | null };
+type ChatMode = "customer" | "staff" | "admin";
+
+type ModeMeta = {
+  title: string;
+  subtitle: string;
+  placeholder: string;
+  launchLabel: string;
+  intro: string;
+  starters: string[];
+  sendLabel: string;
+  allowImage: boolean;
+};
 
 const contactLinks = [
   {
@@ -29,86 +42,220 @@ const contactLinks = [
   },
 ];
 
-const starters = ["Prices", "Services", "How to book", "Salon address"];
+function modeMeta(mode: ChatMode): ModeMeta {
+  if (mode === "admin") {
+    return {
+      title: "Nail Lounge Admin Assistant",
+      subtitle: "Live ops answers for bookings, revenue, staff and leave.",
+      placeholder: "Hỏi doanh thu, lịch hôm nay, leave, booking cần xử lý...",
+      launchLabel: "Ask assistant",
+      intro: "Chào anh/chị. Em có thể trả lời nhanh về doanh thu, booking, leave, staff workload và việc cần ưu tiên từ dữ liệu live hiện có.",
+      starters: ["Hôm nay doanh thu bao nhiêu?", "Có booking nào chưa phân staff?", "Leave nào đang chờ duyệt?", "Tóm tắt lịch hôm nay"],
+      sendLabel: "Send",
+      allowImage: false,
+    };
+  }
+
+  if (mode === "staff") {
+    return {
+      title: "Nail Lounge Staff Assistant",
+      subtitle: "Quick help for schedule, jobs, leave and workload.",
+      placeholder: "Hỏi ca làm, khách tiếp theo, leave, doanh thu hôm nay...",
+      launchLabel: "Ask assistant",
+      intro: "Chào bạn. Mình có thể giúp xem lịch làm, khách tiếp theo, leave ticket, availability và giá trị booking/revenue hiện có của bạn.",
+      starters: ["Hôm nay em có mấy khách?", "Doanh thu hôm nay của em?", "Ca tiếp theo là gì?", "Leave của em đang trạng thái nào?"],
+      sendLabel: "Send",
+      allowImage: false,
+    };
+  }
+
+  return {
+    title: "Nail Lounge Assistant",
+    subtitle: "Quick mobile-friendly help for customers.",
+    placeholder: "Ask about services, prices, booking, nail concerns...",
+    launchLabel: "Chat now",
+    intro: "Hi! I can help with services, prices, booking steps, salon info, simple policies, and even a cautious visual opinion if you upload a nail photo.",
+    starters: ["Prices", "Services", "How to book", "Can I show a nail photo?"],
+    sendLabel: "Send",
+    allowImage: true,
+  };
+}
+
+function detectMode(pathname: string | null, role?: string | null): ChatMode {
+  const page = String(pathname || "").toLowerCase();
+  if (page.startsWith("/admin") || role === "ADMIN" || role === "MANAGER") return "admin";
+  if (page.startsWith("/staff") || role === "STAFF") return "staff";
+  return "customer";
+}
+
+function defaultImagePrompt(mode: ChatMode) {
+  if (mode === "customer") {
+    return "Can you look at this photo and tell me whether the salon may be able to help, and whether I should contact the salon first?";
+  }
+  return "Please look at this image and tell me what matters operationally.";
+}
+
+async function resizeImageToDataUrl(file: File) {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Could not read image"));
+    reader.readAsDataURL(file);
+  });
+
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Could not load image"));
+    img.src = dataUrl;
+  });
+
+  const maxSide = 1280;
+  const ratio = Math.min(1, maxSide / Math.max(image.width || 1, image.height || 1));
+  const width = Math.max(1, Math.round(image.width * ratio));
+  const height = Math.max(1, Math.round(image.height * ratio));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl;
+  ctx.drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL("image/jpeg", 0.84);
+}
 
 export default function ContactBubble() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content:
-        "Hi! I can help with services, prices, booking steps, salon info and simple policies. If you need a human, the contact buttons are below.",
-    },
-  ]);
+  const [showStarters, setShowStarters] = useState(true);
+  const [draftImageUrl, setDraftImageUrl] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
   const pathname = usePathname();
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  const mode = useMemo(() => detectMode(pathname, user?.role), [pathname, user?.role]);
+  const meta = useMemo(() => modeMeta(mode), [mode]);
+
+  useEffect(() => {
+    setMessages([{ role: "assistant", content: meta.intro }]);
+    setInput("");
+    setDraftImageUrl(null);
+    setShowStarters(true);
+  }, [meta.intro]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, open]);
+  }, [messages, open, sending]);
 
-  if (pathname?.startsWith("/admin")) return null;
+  const panelWidth = mode === "customer"
+    ? (showStarters ? "w-[min(calc(100vw-1rem),24rem)]" : "w-[min(calc(100vw-1rem),28rem)]")
+    : (showStarters ? "w-[min(calc(100vw-1rem),26rem)]" : "w-[min(calc(100vw-1rem),32rem)]");
 
   const sendMessage = async (text?: string) => {
-    const content = String(text ?? input).trim();
-    if (!content || sending) return;
-    const nextMessages = [...messages, { role: "user" as const, content }];
+    const raw = String(text ?? input).trim();
+    const content = raw || (draftImageUrl ? defaultImagePrompt(mode) : "");
+    if ((!content && !draftImageUrl) || sending) return;
+
+    const imageUrl = draftImageUrl;
+    const nextMessages: Message[] = [...messages, { role: "user", content, imageUrl }];
     setMessages(nextMessages);
     setInput("");
+    setDraftImageUrl(null);
+    setShowStarters(false);
     setSending(true);
+
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
       const res = await fetch("/api/api/chatbot", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages, page: pathname || "/" }),
+        headers,
+        body: JSON.stringify({
+          messages: nextMessages.map(({ role, content: bodyContent }) => ({ role, content: bodyContent })),
+          page: pathname || "/",
+          imageDataUrl: imageUrl,
+        }),
       });
       const data = await res.json().catch(() => ({}));
-      const answer = String(data?.answer || data?.error || "Sorry, I could not answer that just now.").trim();
+      const answer = String(data?.answer || data?.error || (mode === "customer" ? "Sorry, I could not answer that just now." : "Mình chưa trả lời được câu này ngay lúc này.")).trim();
       setMessages((current) => [...current, { role: "assistant", content: answer }]);
     } catch {
       setMessages((current) => [
         ...current,
-        { role: "assistant", content: "Sorry, the assistant is unavailable right now. Please use WhatsApp or Messenger below." },
+        {
+          role: "assistant",
+          content: mode === "customer"
+            ? "Sorry, the assistant is unavailable right now. Please use WhatsApp or Messenger below."
+            : "Assistant đang tạm gián đoạn. Anh/chị có thể refresh trang hoặc dùng luồng xử lý thủ công tạm thời.",
+        },
       ]);
     } finally {
       setSending(false);
     }
   };
 
+  const handlePickImage = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      event.target.value = "";
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const compressed = await resizeImageToDataUrl(file);
+      setDraftImageUrl(compressed);
+      setOpen(true);
+      setShowStarters(false);
+    } finally {
+      setUploadingImage(false);
+      event.target.value = "";
+    }
+  };
+
   return (
     <div className="fixed bottom-3 right-3 z-[70] flex flex-col items-end gap-3 sm:bottom-5 sm:right-5">
       {open && (
-        <div className="w-[min(calc(100vw-1rem),24rem)] overflow-hidden rounded-[2rem] border border-pink-100 bg-white shadow-2xl shadow-pink-200/40">
+        <div className={`${panelWidth} overflow-hidden rounded-[2rem] border border-pink-100 bg-white shadow-2xl shadow-pink-200/40`}>
           <div className="bg-gradient-to-r from-pink-50 via-white to-rose-50 px-4 py-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-black text-gray-900">Nail Lounge Assistant</p>
-                <p className="mt-1 text-xs leading-5 text-gray-500">Quick answers for customers on mobile.</p>
+                <p className="text-sm font-black text-gray-900">{meta.title}</p>
+                <p className="mt-1 text-xs leading-5 text-gray-500">{meta.subtitle}</p>
               </div>
               <button onClick={() => setOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/80 bg-white text-gray-500 shadow-sm">×</button>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {starters.map((item) => (
-                <button key={item} onClick={() => sendMessage(item)} disabled={sending} className="rounded-full border border-pink-200 bg-white px-3 py-2 text-[11px] font-bold text-pink-700 disabled:opacity-50">
-                  {item}
-                </button>
-              ))}
-            </div>
+            {showStarters && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {meta.starters.map((item) => (
+                  <button key={item} onClick={() => sendMessage(item)} disabled={sending} className="rounded-full border border-pink-200 bg-white px-3 py-2 text-[11px] font-bold text-pink-700 disabled:opacity-50">
+                    {item}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="max-h-[48vh] space-y-3 overflow-y-auto bg-[#fffafc] px-4 py-4">
+          <div className="max-h-[52vh] space-y-3 overflow-y-auto bg-[#fffafc] px-4 py-4">
             {messages.map((message, index) => (
               <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[85%] rounded-[1.4rem] px-4 py-3 text-sm leading-6 shadow-sm ${
+                  className={`max-w-[88%] rounded-[1.4rem] px-4 py-3 text-sm leading-6 shadow-sm ${
                     message.role === "user"
                       ? "bg-gray-900 text-white"
                       : "border border-pink-100 bg-white text-gray-700"
                   }`}
                 >
-                  {message.content}
+                  {message.imageUrl && (
+                    <img src={message.imageUrl} alt="Uploaded reference" className="mb-3 max-h-48 w-full rounded-2xl object-cover" />
+                  )}
+                  <div className="whitespace-pre-wrap">{message.content}</div>
                 </div>
               </div>
             ))}
@@ -121,7 +268,34 @@ export default function ContactBubble() {
           </div>
 
           <div className="border-t border-pink-100 bg-white p-3">
+            {draftImageUrl && (
+              <div className="mb-3 rounded-2xl border border-pink-100 bg-pink-50 p-3">
+                <div className="flex items-start gap-3">
+                  <img src={draftImageUrl} alt="Draft upload" className="h-16 w-16 rounded-2xl object-cover" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-black uppercase tracking-wide text-pink-700">Image attached</p>
+                    <p className="mt-1 text-xs leading-5 text-gray-600">Ask what the salon may be able to do, and the assistant will give a cautious, non-medical opinion.</p>
+                  </div>
+                  <button onClick={() => setDraftImageUrl(null)} className="rounded-xl border border-pink-200 bg-white px-3 py-2 text-xs font-bold text-pink-700">Remove</button>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-end gap-2">
+              {meta.allowImage && (
+                <>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePickImage} className="hidden" />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage || sending}
+                    className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-600 disabled:opacity-50"
+                    title="Upload image"
+                  >
+                    {uploadingImage ? "…" : <PhotoIcon />}
+                  </button>
+                </>
+              )}
               <textarea
                 rows={1}
                 value={input}
@@ -132,40 +306,47 @@ export default function ContactBubble() {
                     sendMessage();
                   }
                 }}
-                placeholder="Ask about services, prices, booking..."
+                placeholder={meta.placeholder}
                 className="min-h-12 flex-1 resize-none rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-800 outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50"
               />
               <button
                 onClick={() => sendMessage()}
-                disabled={sending || !input.trim()}
+                disabled={sending || (!input.trim() && !draftImageUrl)}
                 className="inline-flex h-12 shrink-0 items-center justify-center rounded-2xl bg-pink-600 px-4 text-sm font-black text-white disabled:opacity-50"
               >
-                Send
+                {meta.sendLabel}
               </button>
             </div>
-            <div className="mt-3 grid gap-2">
-              {contactLinks.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm"
-                  >
-                    <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg ${item.className}`}>
-                      <Icon />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-gray-900">{item.label}</span>
-                      <span className="block text-xs text-gray-500">{item.helper}</span>
-                    </span>
-                    <span className="text-pink-400 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
-                  </a>
-                );
-              })}
-            </div>
+
+            {mode === "customer" ? (
+              <div className="mt-3 grid gap-2">
+                {contactLinks.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm"
+                    >
+                      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg ${item.className}`}>
+                        <Icon />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-gray-900">{item.label}</span>
+                        <span className="block text-xs text-gray-500">{item.helper}</span>
+                      </span>
+                      <span className="text-pink-400 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+                    </a>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-3 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-500">
+                Internal mode uses live role-aware context from the current page and signed-in account.
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -181,7 +362,7 @@ export default function ContactBubble() {
         <span className="relative flex h-16 w-16 items-center justify-center rounded-full">{open ? <CloseIcon /> : <ChatIcon />}</span>
         {!open && (
           <span className="absolute right-[4.5rem] hidden whitespace-nowrap rounded-full bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg sm:block">
-            Chat now
+            {meta.launchLabel}
           </span>
         )}
       </button>
@@ -202,6 +383,16 @@ function CloseIcon() {
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="m6 6 12 12M18 6 6 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PhotoIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9Z" stroke="currentColor" strokeWidth="1.8" />
+      <path d="m8 15 2.4-2.7a1 1 0 0 1 1.49-.02L14 14.5l1.2-1.34a1 1 0 0 1 1.48-.04L19 15.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="9" cy="9" r="1.2" fill="currentColor" />
     </svg>
   );
 }

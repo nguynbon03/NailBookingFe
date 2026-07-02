@@ -17,8 +17,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col font-sans">
-        <AuthProvider>{children}</AuthProvider>
-        <ContactBubble />
+        <AuthProvider>
+          {children}
+          <ContactBubble />
+        </AuthProvider>
       </body>
     </html>
   );
