@@ -180,6 +180,8 @@ export const api = {
       return fetchAPI(`/api/admin/reports/revenue${query.toString() ? `?${query.toString()}` : ""}`);
     },
     sendRevenueAction: (data: any) => fetchAPI("/api/admin/reports/revenue", { method: "POST", body: JSON.stringify(data) }),
+    calendarSync: () => fetchAPI("/api/admin/calendar-sync"),
+    updateCalendarSync: (data: any) => fetchAPI("/api/admin/calendar-sync", { method: "PUT", body: JSON.stringify(data) }),
     bankStatements: (params?: { period?: string; date?: string }) => {
       const query = new URLSearchParams();
       if (params?.period) query.set("period", params.period);
