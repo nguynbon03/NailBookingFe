@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+
+type Message = { role: "user" | "assistant"; content: string };
 
 const contactLinks = [
   {
@@ -19,51 +21,151 @@ const contactLinks = [
     icon: MessengerIcon,
   },
   {
-    label: "Instagram Messenger",
-    helper: "Send us an Instagram DM",
+    label: "Instagram",
+    helper: "Send us a DM",
     href: process.env.NEXT_PUBLIC_INSTAGRAM_MESSENGER_URL || "https://ig.me/m/nails.stokesley",
     className: "bg-gradient-to-br from-[#833AB4] via-[#E1306C] to-[#FCAF45] hover:brightness-110",
     icon: InstagramIcon,
   },
 ];
 
+const starters = ["Prices", "Services", "How to book", "Salon address"];
+
 export default function ContactBubble() {
   const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: "assistant",
+      content:
+        "Hi! I can help with services, prices, booking steps, salon info and simple policies. If you need a human, the contact buttons are below.",
+    },
+  ]);
   const pathname = usePathname();
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, open]);
 
   if (pathname?.startsWith("/admin")) return null;
 
+  const sendMessage = async (text?: string) => {
+    const content = String(text ?? input).trim();
+    if (!content || sending) return;
+    const nextMessages = [...messages, { role: "user" as const, content }];
+    setMessages(nextMessages);
+    setInput("");
+    setSending(true);
+    try {
+      const res = await fetch("/api/chatbot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: nextMessages, page: pathname || "/" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const answer = String(data?.answer || data?.error || "Sorry, I could not answer that just now.").trim();
+      setMessages((current) => [...current, { role: "assistant", content: answer }]);
+    } catch {
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", content: "Sorry, the assistant is unavailable right now. Please use WhatsApp or Messenger below." },
+      ]);
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
-    <div className="fixed bottom-5 right-5 z-[70] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+    <div className="fixed bottom-3 right-3 z-[70] flex flex-col items-end gap-3 sm:bottom-5 sm:right-5">
       {open && (
-        <div className="w-[min(calc(100vw-2.5rem),22rem)] rounded-3xl border border-pink-100 bg-white/95 p-4 shadow-2xl shadow-pink-200/50 backdrop-blur-xl">
-          <div className="mb-3 pr-8">
-            <p className="text-sm font-bold text-gray-900">Need help booking?</p>
-            <p className="text-xs text-gray-500">Message us directly and we’ll reply as soon as possible.</p>
+        <div className="w-[min(calc(100vw-1rem),24rem)] overflow-hidden rounded-[2rem] border border-pink-100 bg-white shadow-2xl shadow-pink-200/40">
+          <div className="bg-gradient-to-r from-pink-50 via-white to-rose-50 px-4 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-black text-gray-900">Nail Lounge Assistant</p>
+                <p className="mt-1 text-xs leading-5 text-gray-500">Quick answers for customers on mobile.</p>
+              </div>
+              <button onClick={() => setOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/80 bg-white text-gray-500 shadow-sm">×</button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {starters.map((item) => (
+                <button key={item} onClick={() => sendMessage(item)} disabled={sending} className="rounded-full border border-pink-200 bg-white px-3 py-2 text-[11px] font-bold text-pink-700 disabled:opacity-50">
+                  {item}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="space-y-2">
-            {contactLinks.map((item) => {
-              const Icon = item.icon;
-              return (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-                  aria-label={item.label}
+
+          <div className="max-h-[48vh] space-y-3 overflow-y-auto bg-[#fffafc] px-4 py-4">
+            {messages.map((message, index) => (
+              <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[85%] rounded-[1.4rem] px-4 py-3 text-sm leading-6 shadow-sm ${
+                    message.role === "user"
+                      ? "bg-gray-900 text-white"
+                      : "border border-pink-100 bg-white text-gray-700"
+                  }`}
                 >
-                  <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg ${item.className}`}>
-                    <Icon />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-gray-900">{item.label}</span>
-                    <span className="block text-xs text-gray-500">{item.helper}</span>
-                  </span>
-                  <span className="text-pink-400 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
-                </a>
-              );
-            })}
+                  {message.content}
+                </div>
+              </div>
+            ))}
+            {sending && (
+              <div className="flex justify-start">
+                <div className="rounded-[1.4rem] border border-pink-100 bg-white px-4 py-3 text-sm text-gray-500 shadow-sm">Typing…</div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          <div className="border-t border-pink-100 bg-white p-3">
+            <div className="flex items-end gap-2">
+              <textarea
+                rows={1}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder="Ask about services, prices, booking..."
+                className="min-h-12 flex-1 resize-none rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-800 outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50"
+              />
+              <button
+                onClick={() => sendMessage()}
+                disabled={sending || !input.trim()}
+                className="inline-flex h-12 shrink-0 items-center justify-center rounded-2xl bg-pink-600 px-4 text-sm font-black text-white disabled:opacity-50"
+              >
+                Send
+              </button>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {contactLinks.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm"
+                  >
+                    <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg ${item.className}`}>
+                      <Icon />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-gray-900">{item.label}</span>
+                      <span className="block text-xs text-gray-500">{item.helper}</span>
+                    </span>
+                    <span className="text-pink-400 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+                  </a>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -72,15 +174,13 @@ export default function ContactBubble() {
         type="button"
         onClick={() => setOpen((value) => !value)}
         className="group relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-rose-500 text-white shadow-2xl shadow-rose-300/60 transition-all hover:scale-105 focus:outline-none focus:ring-4 focus:ring-pink-200"
-        aria-label={open ? "Close contact options" : "Open contact options"}
+        aria-label={open ? "Close chat assistant" : "Open chat assistant"}
         aria-expanded={open}
       >
         <span className="absolute inset-0 rounded-full bg-rose-400/40 animate-ping" />
-        <span className="relative flex h-16 w-16 items-center justify-center rounded-full">
-          {open ? <CloseIcon /> : <ChatIcon />}
-        </span>
+        <span className="relative flex h-16 w-16 items-center justify-center rounded-full">{open ? <CloseIcon /> : <ChatIcon />}</span>
         {!open && (
-          <span className="absolute -left-24 hidden rounded-full bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all group-hover:-translate-x-1 sm:block">
+          <span className="absolute right-[4.5rem] hidden whitespace-nowrap rounded-full bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg sm:block">
             Chat now
           </span>
         )}

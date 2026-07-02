@@ -66,6 +66,7 @@ type Booking = {
 
 type Notification = { id: string; title: string; message: string; read: boolean; createdAt: string; type: string };
 type Availability = { id: string; dayOfWeek: number | null; date: string | null; startTime: string; endTime: string; active: boolean };
+type WeekDraftItem = { enabled: boolean; startTime: string; endTime: string };
 type LeaveRequest = { id: string; startDate: string; endDate: string; daysCount: number; reason: string; status: string; managerNote?: string | null; reviewedBy?: string | null; reviewedAt?: string | null; createdAt: string };
 type ViewKey = "requests" | "schedule" | "history" | "availability" | "leave" | "notifications";
 
@@ -99,6 +100,21 @@ function dateISO(value?: string | null) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return String(value).slice(0, 10);
   return d.toISOString().slice(0, 10);
+}
+
+function defaultWeekDraft(weekStart: string, availability: Availability[]) {
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = addDaysISO(weekStart, index);
+    const match = availability.find((item) => dateISO(item.date) === date) || availability.find((item) => !item.date && item.dayOfWeek === ((index + 1) % 7));
+    return [date, {
+      enabled: Boolean(match),
+      startTime: match?.startTime || "09:00",
+      endTime: match?.endTime || "18:00",
+    } satisfies WeekDraftItem];
+  }).reduce<Record<string, WeekDraftItem>>((acc, [date, value]) => {
+    acc[date] = value;
+    return acc;
+  }, {});
 }
 
 function shortDate(value?: string | null) {
@@ -194,7 +210,7 @@ function DetailLine({ icon, label, value }: { icon: React.ReactNode; label: stri
   );
 }
 
-function BookingCard({ booking, mode, onAccept, onComplete, onReject, onNoShow }: { booking: Booking; mode: "request" | "schedule" | "history"; onAccept?: () => void; onComplete?: () => void; onReject?: () => void; onNoShow?: () => void }) {
+function BookingCard({ booking, mode, onAccept, onComplete, onReject, onNoShow, busy = false }: { booking: Booking; mode: "request" | "schedule" | "history"; onAccept?: () => void; onComplete?: () => void; onReject?: () => void; onNoShow?: () => void; busy?: boolean }) {
   const people = Number(booking.numPeople || 1);
   const statusText = mode === "request" && booking.status === "CONFIRMED" ? "Replacement needed" : booking.status;
   return (
@@ -211,12 +227,12 @@ function BookingCard({ booking, mode, onAccept, onComplete, onReject, onNoShow }
             <p className="mt-1 text-xs text-gray-500">{bookingDuration(booking)} · {formatPrice(booking.totalPrice || 0)}</p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            {mode === "request" && <button onClick={onAccept} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-pink-600 px-4 text-sm font-black text-white hover:bg-pink-700"><UserCheck size={16} />Accept job</button>}
+            {mode === "request" && <button disabled={busy} onClick={onAccept} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-pink-600 px-4 text-sm font-black text-white hover:bg-pink-700 disabled:opacity-50"><UserCheck size={16} />{busy ? "Accepting..." : "Accept job"}</button>}
             {mode === "schedule" && (
               <>
-                <button onClick={onComplete} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white hover:bg-emerald-700"><CheckCircle size={16} />Complete</button>
-                <button onClick={onReject} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-4 text-sm font-black text-orange-700 hover:bg-orange-100"><XCircle size={16} />Cannot take</button>
-                <button onClick={onNoShow} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 hover:bg-gray-50">No-show</button>
+                <button disabled={busy} onClick={onComplete} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-50"><CheckCircle size={16} />{busy ? "Updating..." : "Complete"}</button>
+                <button disabled={busy} onClick={onReject} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-4 text-sm font-black text-orange-700 hover:bg-orange-100 disabled:opacity-50"><XCircle size={16} />{busy ? "Updating..." : "Cannot take"}</button>
+                <button disabled={busy} onClick={onNoShow} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 hover:bg-gray-50 disabled:opacity-50">{busy ? "Updating..." : "No-show"}</button>
               </>
             )}
           </div>
@@ -251,13 +267,13 @@ export default function StaffPortalPage() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [form, setForm] = useState(emptyAvailability);
   const [weekStart, setWeekStart] = useState(nextMondayISO());
-  const [weekSelected, setWeekSelected] = useState<Record<string, boolean>>({});
-  const [weekHours, setWeekHours] = useState({ startTime: "09:00", endTime: "18:00" });
+  const [weekDraft, setWeekDraft] = useState<Record<string, WeekDraftItem>>({});
   const [leaveForm, setLeaveForm] = useState({ startDate: todayISO(), endDate: todayISO(), reason: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [actionBusyId, setActionBusyId] = useState("");
   const [rejectTarget, setRejectTarget] = useState<Booking | null>(null);
   const [rejectReason, setRejectReason] = useState(rejectReasons[0]);
   const [rejectOther, setRejectOther] = useState("");
@@ -267,6 +283,10 @@ export default function StaffPortalPage() {
   const unread = notifications.filter((n) => !n.read).length;
   const weekDays = Array.from({ length: 7 }, (_, index) => addDaysISO(weekStart, index));
   const today = todayISO();
+
+  useEffect(() => {
+    setWeekDraft(defaultWeekDraft(weekStart, availability));
+  }, [weekStart, availability]);
 
   const todayBookings = useMemo(() => myBookings.filter((booking) => dateISO(booking.date) === today), [myBookings, today]);
   const nextBooking = useMemo(() => myBookings[0], [myBookings]);
@@ -310,6 +330,7 @@ export default function StaffPortalPage() {
 
   const runAction = async (id: string, action: string, reason?: string | null) => {
     try {
+      setActionBusyId(`${action}:${id}`);
       setError("");
       const result = await api.staff.action(id, action, reason);
       if (result?.calcomSync?.ok) setNotice("Booking updated and synced to calendar.");
@@ -317,6 +338,8 @@ export default function StaffPortalPage() {
       refresh();
     } catch (err: any) {
       setError(err.message || "Action failed");
+    } finally {
+      setActionBusyId("");
     }
   };
 
@@ -359,17 +382,33 @@ export default function StaffPortalPage() {
   };
 
   const saveWeeklyAvailability = async () => {
-    const selectedDates = weekDays.filter((day) => weekSelected[day]);
+    const selectedDates = weekDays.filter((day) => weekDraft[day]?.enabled);
     if (!selectedDates.length) {
-      setError("Tick at least one working day for the week");
+      setError("Switch on at least one working day for the week");
       return;
+    }
+    for (const date of selectedDates) {
+      const slot = weekDraft[date];
+      if (!slot?.startTime || !slot?.endTime || slot.startTime >= slot.endTime) {
+        setError(`Please check working hours for ${shortDate(date)}`);
+        return;
+      }
     }
     try {
       setSaving(true);
       setError("");
-      await Promise.all(selectedDates.map((date) => api.staff.createAvailability({ dayOfWeek: null, date, startTime: weekHours.startTime, endTime: weekHours.endTime, active: true })));
-      setWeekSelected({});
-      setNotice("Selected week days saved.");
+      await Promise.all(
+        selectedDates.map((date) =>
+          api.staff.createAvailability({
+            dayOfWeek: null,
+            date,
+            startTime: weekDraft[date].startTime,
+            endTime: weekDraft[date].endTime,
+            active: true,
+          })
+        )
+      );
+      setNotice("Weekly availability saved.");
       refresh();
     } catch (err: any) {
       setError(err.message || "Could not save weekly availability");
@@ -390,12 +429,16 @@ export default function StaffPortalPage() {
         setError("Please enter leave dates and reason");
         return;
       }
+      setSaving(true);
+      setError("");
       await api.staff.requestLeave(leaveForm);
       setLeaveForm({ startDate: todayISO(), endDate: todayISO(), reason: "" });
       setNotice("Leave ticket submitted for manager review.");
       refresh();
     } catch (err: any) {
       setError(err.message || "Could not request leave");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -478,13 +521,13 @@ export default function StaffPortalPage() {
             <div className="min-w-0 space-y-5">
               {view === "requests" && (
                 <Section title="Open booking requests" subtitle="Verified customer bookings that are open to you. Accepting assigns the job to your schedule." action={<button onClick={refresh} className="inline-flex h-10 items-center gap-2 rounded-2xl bg-pink-50 px-3 text-sm font-black text-pink-600"><RefreshCw size={15} />Refresh</button>}>
-                  {availableBookings.length === 0 ? <EmptyState title="No open requests right now" text="New verified booking requests will appear here automatically." /> : <div className="space-y-3">{availableBookings.map((booking) => <BookingCard key={booking.id} booking={booking} mode="request" onAccept={() => runAction(booking.id, "claim")} />)}</div>}
+                  {availableBookings.length === 0 ? <EmptyState title="No open requests right now" text="New verified booking requests will appear here automatically." /> : <div className="space-y-3">{availableBookings.map((booking) => <BookingCard key={booking.id} booking={booking} mode="request" busy={actionBusyId === `claim:${booking.id}` || actionBusyId === `accept:${booking.id}`} onAccept={() => runAction(booking.id, "claim")} />)}</div>}
                 </Section>
               )}
 
               {view === "schedule" && (
                 <Section title="My schedule" subtitle="Confirmed jobs assigned to you. Complete, mark no-show, or return a job to the replacement pool if you cannot take it.">
-                  {myBookings.length === 0 ? <EmptyState title="No confirmed jobs assigned" text="Accepted bookings will appear in this schedule with phone, email, services, payment and calendar sync details." /> : <div className="space-y-3">{myBookings.map((booking) => <BookingCard key={booking.id} booking={booking} mode="schedule" onComplete={() => runAction(booking.id, "complete")} onReject={() => openReject(booking)} onNoShow={() => runAction(booking.id, "no_show")} />)}</div>}
+                  {myBookings.length === 0 ? <EmptyState title="No confirmed jobs assigned" text="Accepted bookings will appear in this schedule with phone, email, services, payment and calendar sync details." /> : <div className="space-y-3">{myBookings.map((booking) => <BookingCard key={booking.id} booking={booking} mode="schedule" busy={actionBusyId.endsWith(`:${booking.id}`)} onComplete={() => runAction(booking.id, "complete")} onReject={() => openReject(booking)} onNoShow={() => runAction(booking.id, "no_show")} />)}</div>}
                 </Section>
               )}
 
@@ -496,21 +539,38 @@ export default function StaffPortalPage() {
 
               {view === "availability" && (
                 <div className="grid gap-5 2xl:grid-cols-[1fr_420px]">
-                  <Section title="Weekly working hours" subtitle="Tick the exact days you can work this week, then save one set of hours for those selected dates.">
-                    <div className="grid gap-3 sm:grid-cols-[1fr_150px_150px]">
-                      <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Week starts</span><input type="date" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={weekStart} onChange={(e) => { setWeekStart(e.target.value); setWeekSelected({}); }} /></label>
-                      <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Start</span><input type="time" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={weekHours.startTime} onChange={(e) => setWeekHours({ ...weekHours, startTime: e.target.value })} /></label>
-                      <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">End</span><input type="time" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={weekHours.endTime} onChange={(e) => setWeekHours({ ...weekHours, endTime: e.target.value })} /></label>
+                  <Section title="Weekly working hours" subtitle="Tap each day on your phone, switch it on if you can work, then set the exact start/end time for that day.">
+                    <div className="space-y-4">
+                      <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Week starts</span><input type="date" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} /></label>
+                      <div className="rounded-3xl border border-pink-100 bg-pink-50/60 p-3 text-xs font-bold leading-5 text-gray-600">Unticked day = off / busy. Ticked day = working. Each row below can have its own hours, so staff can manage everything nicely on phone.</div>
+                      <div className="space-y-3">
+                        {weekDays.map((day) => {
+                          const slot = weekDraft[day] || { enabled: false, startTime: "09:00", endTime: "18:00" };
+                          return (
+                            <div key={day} className={`rounded-3xl border p-3 sm:p-4 ${slot.enabled ? "border-pink-200 bg-pink-50" : "border-gray-100 bg-white"}`}>
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-black text-gray-950">{new Date(day + "T00:00:00").toLocaleDateString(undefined, { weekday: "long" })}</p>
+                                  <p className="text-xs font-bold text-gray-500">{day}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setWeekDraft((current) => ({ ...current, [day]: { ...(current[day] || slot), enabled: !(current[day]?.enabled ?? slot.enabled) } }))}
+                                  className={`relative h-8 w-14 shrink-0 rounded-full transition ${slot.enabled ? "bg-pink-600" : "bg-gray-300"}`}
+                                >
+                                  <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition ${slot.enabled ? "left-7" : "left-1"}`} />
+                                </button>
+                              </div>
+                              <div className="mt-3 grid grid-cols-2 gap-3">
+                                <label className="block"><span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-gray-400">Start</span><input type="time" disabled={!slot.enabled} className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400" value={slot.startTime} onChange={(e) => setWeekDraft((current) => ({ ...current, [day]: { ...(current[day] || slot), startTime: e.target.value } }))} /></label>
+                                <label className="block"><span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-gray-400">End</span><input type="time" disabled={!slot.enabled} className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400" value={slot.endTime} onChange={(e) => setWeekDraft((current) => ({ ...current, [day]: { ...(current[day] || slot), endTime: e.target.value } }))} /></label>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
-                      {weekDays.map((day) => (
-                        <button key={day} type="button" onClick={() => setWeekSelected((current) => ({ ...current, [day]: !current[day] }))} className={`rounded-2xl border p-3 text-left text-xs font-black transition ${weekSelected[day] ? "border-pink-300 bg-pink-50 text-pink-700" : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200"}`}>
-                          <span className="block">{new Date(day + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" })}</span>
-                          <span className="text-[11px] font-semibold">{day}</span>
-                        </button>
-                      ))}
-                    </div>
-                    <button onClick={saveWeeklyAvailability} disabled={saving} className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-pink-600 px-4 text-sm font-black text-white hover:bg-pink-700 disabled:opacity-50"><Plus size={16} />Save selected week days</button>
+                    <button onClick={saveWeeklyAvailability} disabled={saving} className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-pink-600 px-4 text-sm font-black text-white hover:bg-pink-700 disabled:opacity-50"><Plus size={16} />{saving ? "Saving week..." : "Save weekly availability"}</button>
                   </Section>
 
                   <Section title="One extra slot" subtitle="Use this only when you need one extra repeat day or one specific date outside your weekly ticks.">
@@ -539,7 +599,7 @@ export default function StaffPortalPage() {
                       <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">To</span><input type="date" className="h-12 w-full rounded-2xl border border-sky-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-sky-50" value={leaveForm.endDate} onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })} /></label>
                     </div>
                     <textarea className="mt-3 min-h-28 w-full rounded-2xl border border-sky-200 p-4 text-sm outline-none focus:ring-4 focus:ring-sky-50" placeholder="Reason: today sick, family matter, holiday request..." value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} />
-                    <button onClick={requestLeave} className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-pink-600 px-4 text-sm font-black text-white hover:bg-pink-700"><Send size={16} />Submit leave ticket</button>
+                    <button onClick={requestLeave} disabled={saving} className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-pink-600 px-4 text-sm font-black text-white hover:bg-pink-700 disabled:opacity-50"><Send size={16} />{saving ? "Submitting..." : "Submit leave ticket"}</button>
                   </Section>
 
                   <Section title="Leave history" subtitle="Manager approval status and notes appear here.">
@@ -575,7 +635,7 @@ export default function StaffPortalPage() {
             {rejectReason === "Other" && <textarea value={rejectOther} onChange={(e) => setRejectOther(e.target.value)} className="mb-3 min-h-24 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm" placeholder="Enter reason" />}
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setRejectTarget(null)} className="min-h-11 rounded-2xl border border-gray-200 bg-white font-black text-gray-700">Back</button>
-              <button onClick={submitReject} className="min-h-11 rounded-2xl bg-orange-600 font-black text-white">Submit reason</button>
+              <button onClick={submitReject} disabled={actionBusyId === `reject:${rejectTarget.id}`} className="min-h-11 rounded-2xl bg-orange-600 font-black text-white disabled:opacity-50">{actionBusyId === `reject:${rejectTarget.id}` ? "Submitting..." : "Submit reason"}</button>
             </div>
           </div>
         </div>

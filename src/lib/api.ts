@@ -128,7 +128,13 @@ export const api = {
   },
 
   admin: {
-    stats: () => fetchAPI("/api/admin/stats"),
+    stats: (params?: { fromDate?: string; toDate?: string; granularity?: "daily" | "monthly" | "yearly" }) => {
+      const query = new URLSearchParams();
+      if (params?.fromDate) query.set("fromDate", params.fromDate);
+      if (params?.toDate) query.set("toDate", params.toDate);
+      if (params?.granularity) query.set("granularity", params.granularity);
+      return fetchAPI(`/api/admin/stats${query.toString() ? `?${query.toString()}` : ""}`);
+    },
     bookings: (params?: { date?: string; includeArchived?: boolean; status?: string }) => {
       const query = new URLSearchParams();
       if (params?.date) query.set("date", params.date);
@@ -173,19 +179,23 @@ export const api = {
     },
     updateCustomerExport: (exportEnabled: boolean) =>
       fetchAPI("/api/admin/customers", { method: "PUT", body: JSON.stringify({ exportEnabled }) }),
-    revenueReport: (params?: { period?: string; date?: string }) => {
+    revenueReport: (params?: { period?: string; date?: string; fromDate?: string; toDate?: string }) => {
       const query = new URLSearchParams();
       if (params?.period) query.set("period", params.period);
       if (params?.date) query.set("date", params.date);
+      if (params?.fromDate) query.set("fromDate", params.fromDate);
+      if (params?.toDate) query.set("toDate", params.toDate);
       return fetchAPI(`/api/admin/reports/revenue${query.toString() ? `?${query.toString()}` : ""}`);
     },
     sendRevenueAction: (data: any) => fetchAPI("/api/admin/reports/revenue", { method: "POST", body: JSON.stringify(data) }),
     calendarSync: () => fetchAPI("/api/admin/calendar-sync"),
     updateCalendarSync: (data: any) => fetchAPI("/api/admin/calendar-sync", { method: "PUT", body: JSON.stringify(data) }),
-    bankStatements: (params?: { period?: string; date?: string }) => {
+    bankStatements: (params?: { period?: string; date?: string; fromDate?: string; toDate?: string }) => {
       const query = new URLSearchParams();
       if (params?.period) query.set("period", params.period);
       if (params?.date) query.set("date", params.date);
+      if (params?.fromDate) query.set("fromDate", params.fromDate);
+      if (params?.toDate) query.set("toDate", params.toDate);
       return fetchAPI(`/api/admin/bank-statements${query.toString() ? `?${query.toString()}` : ""}`);
     },
     importBankStatement: (csv: string) =>

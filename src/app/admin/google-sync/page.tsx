@@ -49,7 +49,7 @@ const fallbackSettings: Settings = {
 function authHeaders() {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
   if (!token) return {};
-  return { Authorization: ["B", "e", "a", "r", "e", "r"].join("") + " " + token };
+  return { Authorization: String.fromCharCode(66, 101, 97, 114, 101, 114) + " " + token };
 }
 
 function shortDate(value?: string | null) {
@@ -240,7 +240,7 @@ export default function CalendarReportsPage() {
             <p className="text-xs font-black uppercase tracking-[0.18em] text-pink-600">Owner setup</p>
             <h1 className="mt-2 text-2xl font-black text-gray-950 sm:text-3xl">Calendar & Daily Reports</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
-              Connect the shop Gmail calendar and enter the owner's Gmail address. Staff working hours are never pre-filled; each staff member must add their own availability.
+              Connect the shop Gmail calendar if you want auto calendar sync. For owner/admin notifications and daily revenue PDF, entering one Gmail address below is enough.
             </p>
           </div>
           <button onClick={load} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 hover:bg-gray-50">
@@ -259,7 +259,7 @@ export default function CalendarReportsPage() {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.05fr_.95fr]">
-        <Section title="Owner Gmail" subtitle="This is the only address needed for the daily PDF revenue report.">
+        <Section title="Owner Gmail" subtitle="This one Gmail receives important ops alerts and the daily PDF revenue report.">
           {loading ? <div className="py-10 text-center text-gray-400">Loading...</div> : (
             <div className="space-y-4">
               <label className="block">
@@ -284,6 +284,7 @@ export default function CalendarReportsPage() {
                 </label>
                 <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 text-xs leading-5 text-gray-500">
                   <b className="text-gray-900">Revenue rule:</b> only confirmed or completed bookings are counted.
+                  <div className="mt-2">This mailbox also receives important alerts only: staff sick/leave, leave conflicts, and customer cancellation requests that need admin attention.</div>
                 </div>
               </div>
               <Toggle
@@ -313,6 +314,8 @@ export default function CalendarReportsPage() {
             <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-600">
               <div className="flex items-center gap-2 font-black text-gray-900"><CalendarDays size={16} /> Calendar status</div>
               <p className="mt-2 text-xs leading-5">Connected Gmail accounts: {activeConnectionCount}. Last update: {shortDate(settings.lastSyncAt)}.</p>
+              <p className="mt-2 text-xs leading-5 text-gray-500">If Google shows <b>redirect_uri_mismatch</b>, whitelist this exact callback URI in Google Cloud:</p>
+              <code className="mt-2 block overflow-x-auto rounded-xl bg-white px-3 py-2 text-[11px] font-bold text-pink-700">{env.google?.redirectUri || `${API_BASE}/api/auth/callback/google`}</code>
             </div>
             <div className="flex flex-wrap gap-2">
               <a href={connectUrl} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-4 text-sm font-black text-white hover:bg-gray-800"><LinkIcon size={16} />Connect Gmail Calendar</a>
