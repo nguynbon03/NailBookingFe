@@ -293,7 +293,7 @@ export default function CalendarReportsPage() {
                 description="The report is emailed to the owner every day at the selected time."
               />
               <div className="flex flex-wrap gap-2">
-                <button onClick={() => save({ dailyReportEmailEnabled: true, dailyReportSmsEnabled: false })} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-pink-600 px-4 text-sm font-black text-white hover:bg-pink-700 disabled:opacity-50"><Save size={16} />{saving ? "Saving..." : "Save"}</button>
+                <button onClick={() => save({ autoDailyReportEnabled: true, dailyExportEnabled: true, dailyReportEmailEnabled: true, dailyReportSmsEnabled: false })} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-pink-600 px-4 text-sm font-black text-white hover:bg-pink-700 disabled:opacity-50"><Save size={16} />{saving ? "Saving..." : "Save & enable daily email"}</button>
                 <button onClick={sendDailyEmail} disabled={busy === "email" || !settings.ownerEmail} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 hover:bg-gray-50 disabled:opacity-50"><Send size={16} />Send daily PDF now</button>
                 <button onClick={exportDailyPdf} disabled={busy === "pdf"} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 hover:bg-gray-50 disabled:opacity-50"><Download size={16} />Download today's PDF</button>
               </div>
