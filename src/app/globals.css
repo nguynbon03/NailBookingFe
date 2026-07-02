@@ -10,6 +10,7 @@
   --muted: #fdf2f8;
   --card: #ffffff;
   --border: #fce7f3;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 @theme inline {
