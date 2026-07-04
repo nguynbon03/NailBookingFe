@@ -120,6 +120,8 @@ export const api = {
       fetchAPI("/api/staff/bookings", { method: "PUT", body: JSON.stringify({ id, action, cancellationReason }) }),
     availability: () => fetchAPI("/api/staff/availability"),
     createAvailability: (data: any) => fetchAPI("/api/staff/availability", { method: "POST", body: JSON.stringify(data) }),
+    replaceWeekAvailability: (data: { weekStart: string; weekEnd: string; slots: any[] }) =>
+      fetchAPI("/api/staff/availability", { method: "POST", body: JSON.stringify({ ...data, replaceWeek: true }) }),
     updateAvailability: (data: any) => fetchAPI("/api/staff/availability", { method: "PUT", body: JSON.stringify(data) }),
     deleteAvailability: (id: string) => fetchAPI("/api/staff/availability", { method: "DELETE", body: JSON.stringify({ id }) }),
     leaves: () => fetchAPI("/api/staff/leave"),

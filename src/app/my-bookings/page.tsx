@@ -69,7 +69,7 @@ export default function MyBookingsPage() {
   };
 
   const refreshNotifications = () => {
-    api.notifications.list(undefined, 20)
+    api.notifications.list("customer", 20)
       .then((data: any) => {
         setWebsiteNotifications(data.notifications || []);
         setUnreadNotifications(Number(data.unread || 0));

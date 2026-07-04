@@ -25,6 +25,16 @@ function shortDate(value: string) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
+function dayKey(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value.slice(0, 10) : date.toISOString().slice(0, 10);
+}
+
+function longDay(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(undefined, { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+}
+
 function typeClass(type: string) {
   if (type.includes("CANCEL")) return "bg-red-50 text-red-700 border-red-100";
   if (type.includes("REJECT")) return "bg-orange-50 text-orange-700 border-orange-100";
@@ -82,6 +92,16 @@ export default function AdminInboxPage() {
 
   const selectedIds = useMemo(() => Object.entries(selected).filter(([, value]) => value).map(([id]) => id), [selected]);
   const allSelected = items.length > 0 && selectedIds.length === items.length;
+  const groupedItems = useMemo(() => {
+    const groups = new Map<string, NotificationRow[]>();
+    for (const item of items) {
+      const key = dayKey(item.createdAt);
+      const bucket = groups.get(key) || [];
+      bucket.push(item);
+      groups.set(key, bucket);
+    }
+    return Array.from(groups.entries()).map(([key, rows]) => ({ key, label: longDay(key), rows }));
+  }, [items]);
 
   const markOne = async (id: string, read: boolean) => {
     try {
@@ -154,7 +174,8 @@ export default function AdminInboxPage() {
     setNotice("");
     try {
       const result = await api.notifications.action(item.id, action, note);
-      setItems((rows) => rows.map((row) => row.id === item.id ? { ...row, read: true } : row));
+      setItems((rows) => rows.filter((row) => row.id !== item.id));
+      setSelected((current) => ({ ...current, [item.id]: false }));
       setUnread((n) => Math.max(0, n - (item.read ? 0 : 1)));
       const conflicts = result.affectedBookings?.length ? ` Warning: ${result.affectedBookings.length} assigned booking(s) overlap this approved leave.` : "";
       setNotice(`${labels[action] || "Ticket processed"}.${conflicts}`);
@@ -178,7 +199,7 @@ export default function AdminInboxPage() {
         <div>
           <p className="text-pink-600 text-xs font-black uppercase tracking-wide">Admin ticket inbox</p>
           <h2 className="text-xl sm:text-2xl font-black text-gray-900 mt-1">Inbox</h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">Customer cancellations, staff leave, and staff rejection tickets appear here. This page auto-refreshes every 10 seconds so Admin/Manager can reassign staff or contact customers quickly.</p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Customer cancellations, staff leave, and staff rejection tickets appear here. This page auto-refreshes every 10 seconds and groups tickets by day so Admin/Manager can audit updates without missing anything.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={refresh} className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-bold inline-flex items-center gap-2"><RefreshCw size={16} />Refresh</button>
@@ -211,51 +232,60 @@ export default function AdminInboxPage() {
       {loading ? <div className="py-12 text-center text-gray-400">Loading inbox...</div> : items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400">Inbox is empty.</div>
       ) : (
-        <div className="space-y-3">
-          {items.map((item) => (
-            <div key={item.id} className={`bg-white rounded-2xl border shadow-sm p-4 ${item.read ? "border-gray-100" : "border-pink-200 ring-2 ring-pink-50"}`}>
-              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
-                <div className="min-w-0 flex gap-3">
-                  <input type="checkbox" checked={Boolean(selected[item.id])} onChange={(e) => setSelected((current) => ({ ...current, [item.id]: e.target.checked }))} className="mt-1 h-4 w-4 accent-pink-600 shrink-0" />
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <Bell size={17} className={item.read ? "text-gray-400" : "text-pink-600"} />
-                      <h3 className="font-black text-gray-900">{item.title}</h3>
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${typeClass(item.type)}`}>{item.type.replace(/_/g, " ")}</span>
-                      {!item.read && <span className="px-2 py-1 rounded-full bg-pink-600 text-white text-[10px] font-black uppercase">Unread</span>}
-                    </div>
-                    <p className="text-sm text-gray-600 leading-6">{item.message}</p>
-                    <p className="text-xs text-gray-400 mt-2">{shortDate(item.createdAt)}{item.bookingId ? ` · booking ${item.bookingId.slice(-8).toUpperCase()}` : ""}</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2 shrink-0 lg:justify-end">
-                  {item.type === "STAFF_REJECTED_JOB" && (
-                    <>
-                      {item.bookingId && <a href={`/admin/bookings?highlight=${item.bookingId}`} className="min-h-10 rounded-xl bg-orange-600 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1">Open booking</a>}
-                      <a href="/staff" className="min-h-10 rounded-xl bg-gray-900 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1">Find staff</a>
-                      <button disabled={busyId === item.id} onClick={() => runAction(item, "acknowledge")} className="min-h-10 rounded-xl bg-pink-600 px-3 text-white text-sm font-bold disabled:opacity-50">Acknowledge</button>
-                    </>
-                  )}
-                  {item.type === "CUSTOMER_CANCEL_REQUEST" && (
-                    <>
-                      <button disabled={busyId === item.id} onClick={() => runAction(item, "approveCancellation")} className="min-h-10 rounded-xl bg-red-600 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"><CheckCircle2 size={15} />Approve cancel</button>
-                      <button disabled={busyId === item.id} onClick={() => runAction(item, "keepBooking")} className="min-h-10 rounded-xl bg-gray-900 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"><ClipboardCheck size={15} />Keep booking</button>
-                    </>
-                  )}
-                  {item.type === "STAFF_LEAVE_REQUESTED" && (
-                    <>
-                      <button disabled={busyId === item.id} onClick={() => runAction(item, "approveLeave")} className="min-h-10 rounded-xl bg-emerald-600 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"><CheckCircle2 size={15} />Approve</button>
-                      <button disabled={busyId === item.id} onClick={() => runAction(item, "rejectLeave")} className="min-h-10 rounded-xl bg-red-600 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"><XCircle size={15} />Reject</button>
-                    </>
-                  )}
-                  {(item.type === "CUSTOMER_CANCELLED_PENDING_BOOKING" || item.type === "STAFF_LEAVE_CANCELLED") && (
-                    <button disabled={busyId === item.id} onClick={() => runAction(item, "acknowledge")} className="min-h-10 rounded-xl bg-pink-600 px-3 text-white text-sm font-bold disabled:opacity-50">Acknowledge</button>
-                  )}
-                  <button onClick={() => markOne(item.id, !item.read)} className="min-h-10 rounded-xl bg-gray-50 px-3 text-gray-600 text-sm font-bold hover:bg-gray-100">{item.read ? "Unread" : "Read"}</button>
-                  <button onClick={() => remove(item.id)} className="min-h-10 w-10 rounded-xl bg-red-50 text-red-600 inline-flex items-center justify-center hover:bg-red-100"><Trash2 size={15} /></button>
-                </div>
+        <div className="space-y-5">
+          {groupedItems.map((group) => (
+            <section key={group.key} className="space-y-3">
+              <div className="sticky top-0 z-[1] rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-black text-gray-700">
+                {group.label}
               </div>
-            </div>
+              <div className="space-y-3">
+                {group.rows.map((item) => (
+                  <div key={item.id} className={`bg-white rounded-2xl border shadow-sm p-4 ${item.read ? "border-gray-100" : "border-pink-200 ring-2 ring-pink-50"}`}>
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                      <div className="min-w-0 flex gap-3">
+                        <input type="checkbox" checked={Boolean(selected[item.id])} onChange={(e) => setSelected((current) => ({ ...current, [item.id]: e.target.checked }))} className="mt-1 h-4 w-4 accent-pink-600 shrink-0" />
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <Bell size={17} className={item.read ? "text-gray-400" : "text-pink-600"} />
+                            <h3 className="font-black text-gray-900">{item.title}</h3>
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${typeClass(item.type)}`}>{item.type.replace(/_/g, " ")}</span>
+                            {!item.read && <span className="px-2 py-1 rounded-full bg-pink-600 text-white text-[10px] font-black uppercase">Unread</span>}
+                          </div>
+                          <p className="text-sm text-gray-600 leading-6">{item.message}</p>
+                          <p className="text-xs text-gray-400 mt-2">{shortDate(item.createdAt)}{item.bookingId ? ` · booking ${item.bookingId.slice(-8).toUpperCase()}` : ""}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 shrink-0 lg:justify-end">
+                        {item.type === "STAFF_REJECTED_JOB" && (
+                          <>
+                            {item.bookingId && <a href={`/admin/bookings?highlight=${item.bookingId}`} className="min-h-10 rounded-xl bg-orange-600 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1">Open booking</a>}
+                            <a href="/staff" className="min-h-10 rounded-xl bg-gray-900 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1">Find staff</a>
+                            <button disabled={busyId === item.id} onClick={() => runAction(item, "acknowledge")} className="min-h-10 rounded-xl bg-pink-600 px-3 text-white text-sm font-bold disabled:opacity-50">Acknowledge</button>
+                          </>
+                        )}
+                        {item.type === "CUSTOMER_CANCEL_REQUEST" && (
+                          <>
+                            <button disabled={busyId === item.id} onClick={() => runAction(item, "approveCancellation")} className="min-h-10 rounded-xl bg-red-600 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"><CheckCircle2 size={15} />Approve cancel</button>
+                            <button disabled={busyId === item.id} onClick={() => runAction(item, "keepBooking")} className="min-h-10 rounded-xl bg-gray-900 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"><ClipboardCheck size={15} />Keep booking</button>
+                          </>
+                        )}
+                        {item.type === "STAFF_LEAVE_REQUESTED" && (
+                          <>
+                            <button disabled={busyId === item.id} onClick={() => runAction(item, "approveLeave")} className="min-h-10 rounded-xl bg-emerald-600 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"><CheckCircle2 size={15} />Approve</button>
+                            <button disabled={busyId === item.id} onClick={() => runAction(item, "rejectLeave")} className="min-h-10 rounded-xl bg-red-600 px-3 text-white text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"><XCircle size={15} />Reject</button>
+                          </>
+                        )}
+                        {(item.type === "CUSTOMER_CANCELLED_PENDING_BOOKING" || item.type === "STAFF_LEAVE_CANCELLED") && (
+                          <button disabled={busyId === item.id} onClick={() => runAction(item, "acknowledge")} className="min-h-10 rounded-xl bg-pink-600 px-3 text-white text-sm font-bold disabled:opacity-50">Acknowledge</button>
+                        )}
+                        <button onClick={() => markOne(item.id, !item.read)} className="min-h-10 rounded-xl bg-gray-50 px-3 text-gray-600 text-sm font-bold hover:bg-gray-100">{item.read ? "Unread" : "Read"}</button>
+                        <button onClick={() => remove(item.id)} className="min-h-10 w-10 rounded-xl bg-red-50 text-red-600 inline-flex items-center justify-center hover:bg-red-100"><Trash2 size={15} /></button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}

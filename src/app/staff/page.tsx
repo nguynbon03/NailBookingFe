@@ -22,6 +22,7 @@ import {
   Phone,
   Plane,
   Plus,
+  PoundSterling,
   RefreshCw,
   Send,
   Sparkles,
@@ -68,6 +69,7 @@ type Notification = { id: string; title: string; message: string; read: boolean;
 type Availability = { id: string; dayOfWeek: number | null; date: string | null; startTime: string; endTime: string; active: boolean };
 type WeekDraftItem = { enabled: boolean; startTime: string; endTime: string };
 type LeaveRequest = { id: string; startDate: string; endDate: string; daysCount: number; reason: string; status: string; managerNote?: string | null; reviewedBy?: string | null; reviewedAt?: string | null; createdAt: string };
+type DashboardStats = { available: number; assigned: number; history: number; completed: number; revenueToday?: number; revenueWeek?: number; revenueMonth?: number; revenueTotal?: number };
 type ViewKey = "requests" | "schedule" | "history" | "availability" | "leave" | "notifications";
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -262,12 +264,14 @@ export default function StaffPortalPage() {
   const [availableBookings, setAvailableBookings] = useState<Booking[]>([]);
   const [myBookings, setMyBookings] = useState<Booking[]>([]);
   const [historyBookings, setHistoryBookings] = useState<Booking[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({ available: 0, assigned: 0, history: 0, completed: 0, revenueToday: 0, revenueWeek: 0, revenueMonth: 0, revenueTotal: 0 });
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [availability, setAvailability] = useState<Availability[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [form, setForm] = useState(emptyAvailability);
   const [weekStart, setWeekStart] = useState(nextMondayISO());
   const [weekDraft, setWeekDraft] = useState<Record<string, WeekDraftItem>>({});
+  const [selectedNotifications, setSelectedNotifications] = useState<Record<string, boolean>>({});
   const [leaveForm, setLeaveForm] = useState({ startDate: todayISO(), endDate: todayISO(), reason: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -281,8 +285,14 @@ export default function StaffPortalPage() {
   const allowed = user && ["STAFF", "ADMIN", "MANAGER"].includes(user.role);
   const pendingLeaves = leaveRequests.filter((item) => item.status === "PENDING").length;
   const unread = notifications.filter((n) => !n.read).length;
+  const selectedNotificationIds = notifications.filter((item) => selectedNotifications[item.id]).map((item) => item.id);
+  const allNotificationsSelected = notifications.length > 0 && notifications.every((item) => selectedNotifications[item.id]);
   const weekDays = Array.from({ length: 7 }, (_, index) => addDaysISO(weekStart, index));
   const today = todayISO();
+
+  useEffect(() => {
+    setSelectedNotifications((current) => Object.fromEntries(Object.entries(current).filter(([id]) => notifications.some((item) => item.id === id))));
+  }, [notifications]);
 
   useEffect(() => {
     setWeekDraft(defaultWeekDraft(weekStart, availability));
@@ -304,6 +314,7 @@ export default function StaffPortalPage() {
         setAvailableBookings(dashboard.availableBookings || []);
         setMyBookings(dashboard.myBookings || []);
         setHistoryBookings(dashboard.historyBookings || []);
+        setDashboardStats(dashboard.stats || { available: 0, assigned: 0, history: 0, completed: 0, revenueToday: 0, revenueWeek: 0, revenueMonth: 0, revenueTotal: 0 });
         setNotifications(notificationData.notifications || []);
         setAvailability(slots);
         setLeaveRequests(leaveData.leaveRequests || []);
@@ -383,10 +394,6 @@ export default function StaffPortalPage() {
 
   const saveWeeklyAvailability = async () => {
     const selectedDates = weekDays.filter((day) => weekDraft[day]?.enabled);
-    if (!selectedDates.length) {
-      setError("Switch on at least one working day for the week");
-      return;
-    }
     for (const date of selectedDates) {
       const slot = weekDraft[date];
       if (!slot?.startTime || !slot?.endTime || slot.startTime >= slot.endTime) {
@@ -397,18 +404,18 @@ export default function StaffPortalPage() {
     try {
       setSaving(true);
       setError("");
-      await Promise.all(
-        selectedDates.map((date) =>
-          api.staff.createAvailability({
-            dayOfWeek: null,
-            date,
-            startTime: weekDraft[date].startTime,
-            endTime: weekDraft[date].endTime,
-            active: true,
-          })
-        )
-      );
-      setNotice("Weekly availability saved.");
+      await api.staff.replaceWeekAvailability({
+        weekStart,
+        weekEnd: weekDays[weekDays.length - 1],
+        slots: selectedDates.map((date) => ({
+          dayOfWeek: null,
+          date,
+          startTime: weekDraft[date].startTime,
+          endTime: weekDraft[date].endTime,
+          active: true,
+        })),
+      });
+      setNotice(selectedDates.length ? "Weekly availability saved and old slots for that week were replaced." : "This week was cleared from your saved availability.");
       refresh();
     } catch (err: any) {
       setError(err.message || "Could not save weekly availability");
@@ -457,6 +464,22 @@ export default function StaffPortalPage() {
     refresh();
   };
 
+  const deleteSelectedNotifications = async () => {
+    if (!selectedNotificationIds.length) return;
+    await api.notifications.deleteMany(selectedNotificationIds, "staff");
+    setNotice(`${selectedNotificationIds.length} notification(s) deleted.`);
+    setSelectedNotifications({});
+    refresh();
+  };
+
+  const deleteAllNotifications = async () => {
+    if (!notifications.length) return;
+    await api.notifications.deleteAll("staff");
+    setNotice("All staff notifications deleted.");
+    setSelectedNotifications({});
+    refresh();
+  };
+
   const navItems: { key: ViewKey; label: string; count?: number; icon: React.ReactNode }[] = [
     { key: "requests", label: "Open requests", count: availableBookings.length, icon: <ClipboardList size={17} /> },
     { key: "schedule", label: "My schedule", count: myBookings.length, icon: <CalendarDays size={17} /> },
@@ -493,12 +516,19 @@ export default function StaffPortalPage() {
           {error && <div className="mb-4 flex gap-2 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700"><AlertTriangle size={18} className="shrink-0" />{error}</div>}
           {notice && <div className="mb-4 flex gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-bold text-emerald-700"><CheckCircle size={18} className="shrink-0" />{notice}</div>}
 
-          <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-5">
-            <StatCard icon={<ClipboardList size={20} />} label="Open" value={availableBookings.length} tone="pink" />
-            <StatCard icon={<CalendarDays size={20} />} label="Assigned" value={myBookings.length} tone="emerald" />
-            <StatCard icon={<Clock size={20} />} label="Today" value={todayBookings.length} tone="amber" />
-            <StatCard icon={<History size={20} />} label="History" value={historyBookings.length} tone="sky" />
-            <StatCard icon={<Bell size={20} />} label="Unread" value={unread} tone="slate" />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+              <StatCard icon={<ClipboardList size={20} />} label="Open" value={dashboardStats.available || availableBookings.length} tone="pink" />
+              <StatCard icon={<CalendarDays size={20} />} label="Assigned" value={dashboardStats.assigned || myBookings.length} tone="emerald" />
+              <StatCard icon={<Clock size={20} />} label="Today" value={todayBookings.length} tone="amber" />
+              <StatCard icon={<History size={20} />} label="History" value={dashboardStats.history || historyBookings.length} tone="sky" />
+              <StatCard icon={<Bell size={20} />} label="Unread" value={unread} tone="slate" />
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <StatCard icon={<PoundSterling size={20} />} label="Revenue today" value={formatPrice(dashboardStats.revenueToday || 0)} tone="emerald" />
+              <StatCard icon={<PoundSterling size={20} />} label="Revenue this week" value={formatPrice(dashboardStats.revenueWeek || 0)} tone="amber" />
+              <StatCard icon={<PoundSterling size={20} />} label="Revenue total" value={formatPrice(dashboardStats.revenueTotal || 0)} tone="pink" />
+            </div>
           </div>
 
           <div className="grid gap-5 xl:grid-cols-[270px_minmax(0,1fr)]">
@@ -539,10 +569,10 @@ export default function StaffPortalPage() {
 
               {view === "availability" && (
                 <div className="grid gap-5 2xl:grid-cols-[1fr_420px]">
-                  <Section title="Weekly working hours" subtitle="Tap each day on your phone, switch it on if you can work, then set the exact start/end time for that day.">
+                  <Section title="Weekly working hours" subtitle="Save your main shift for each day. When you save, this replaces the saved rota for the selected week in real time.">
                     <div className="space-y-4">
                       <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Week starts</span><input type="date" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} /></label>
-                      <div className="rounded-3xl border border-pink-100 bg-pink-50/60 p-3 text-xs font-bold leading-5 text-gray-600">Unticked day = off / busy. Ticked day = working. Each row below can have its own hours, so staff can manage everything nicely on phone.</div>
+                      <div className="rounded-3xl border border-pink-100 bg-pink-50/60 p-3 text-xs font-bold leading-5 text-gray-600">Unticked day = off / busy. Ticked day = working. Save the week once and the calendar updates straight away. Need two shifts in one day? Save the main block here, then add the second block in the panel on the right.</div>
                       <div className="space-y-3">
                         {weekDays.map((day) => {
                           const slot = weekDraft[day] || { enabled: false, startTime: "09:00", endTime: "18:00" };
@@ -573,10 +603,11 @@ export default function StaffPortalPage() {
                     <button onClick={saveWeeklyAvailability} disabled={saving} className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-pink-600 px-4 text-sm font-black text-white hover:bg-pink-700 disabled:opacity-50"><Plus size={16} />{saving ? "Saving week..." : "Save weekly availability"}</button>
                   </Section>
 
-                  <Section title="One extra slot" subtitle="Use this only when you need one extra repeat day or one specific date outside your weekly ticks.">
+                  <Section title="Second shift / extra hours" subtitle="Use this when you need a second block on the same day (for example 09:00-12:00 and 13:00-18:00), or one special date outside your main weekly rota.">
                     <div className="space-y-3">
                       <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Repeat every</span><select className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.dayOfWeek} onChange={(e) => setForm({ ...form, dayOfWeek: e.target.value, date: "" })}>{days.map((d, i) => <option key={d} value={i}>{d}</option>)}</select></label>
                       <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Or specific date</span><input type="date" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></label>
+                      <div className="rounded-3xl border border-sky-100 bg-sky-50/70 p-3 text-xs font-bold leading-5 text-gray-600">Example: if Monday main shift is 09:00-12:00, add another slot here for the same Monday from 13:00-18:00. That creates a clean split shift instead of one long block.</div>
                       <div className="grid grid-cols-2 gap-3">
                         <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Start</span><input type="time" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} /></label>
                         <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">End</span><input type="time" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></label>
@@ -609,8 +640,8 @@ export default function StaffPortalPage() {
               )}
 
               {view === "notifications" && (
-                <Section title="Notifications" subtitle="Only updates linked to your own leave tickets or your own assigned bookings appear here." action={<button onClick={markNotificationsRead} className="inline-flex h-10 items-center gap-2 rounded-2xl bg-gray-900 px-3 text-sm font-black text-white"><Bell size={15} />Mark all read</button>}>
-                  {notifications.length === 0 ? <EmptyState title="No notifications" text="Important booking and leave updates will appear here." /> : <div className="grid gap-3 lg:grid-cols-2">{notifications.map((n) => <div key={n.id} className={`rounded-3xl border p-4 ${n.read ? "border-gray-100 bg-white" : "border-pink-100 bg-pink-50"}`}><div className="flex items-start justify-between gap-3"><div><p className="font-black text-gray-950">{n.title}</p><p className="mt-1 text-sm leading-6 text-gray-600">{n.message}</p></div>{!n.read && <span className="rounded-full bg-pink-600 px-2 py-1 text-[10px] font-black text-white">NEW</span>}</div><p className="mt-3 text-xs font-bold text-gray-400">{longDateTime(n.createdAt)}</p></div>)}</div>}
+                <Section title="Notifications" subtitle="Only updates linked to your own leave tickets or your own assigned bookings appear here." action={<div className="flex flex-wrap gap-2"><button onClick={markNotificationsRead} className="inline-flex h-10 items-center gap-2 rounded-2xl bg-gray-900 px-3 text-sm font-black text-white"><Bell size={15} />Mark all read</button><button onClick={deleteSelectedNotifications} disabled={!selectedNotificationIds.length} className="inline-flex h-10 items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 text-sm font-black text-red-600 disabled:opacity-40"><Trash size={15} />Delete selected</button><button onClick={deleteAllNotifications} disabled={!notifications.length} className="inline-flex h-10 items-center gap-2 rounded-2xl bg-red-600 px-3 text-sm font-black text-white disabled:opacity-40"><Trash size={15} />Delete all</button></div>}>
+                  {notifications.length === 0 ? <EmptyState title="No notifications" text="Important booking and leave updates will appear here." /> : <div className="space-y-3"><div className="flex items-center justify-between rounded-2xl border border-gray-100 bg-white p-3 text-sm font-bold text-gray-600"><label className="inline-flex items-center gap-2"><input type="checkbox" checked={allNotificationsSelected} onChange={(e) => setSelectedNotifications(e.target.checked ? Object.fromEntries(notifications.map((item) => [item.id, true])) : {})} className="h-4 w-4 accent-pink-600" />Select all visible</label><span>{selectedNotificationIds.length} selected</span></div><div className="grid gap-3 lg:grid-cols-2">{notifications.map((n) => <div key={n.id} className={`rounded-3xl border p-4 ${n.read ? "border-gray-100 bg-white" : "border-pink-100 bg-pink-50"}`}><div className="flex items-start justify-between gap-3"><div className="flex items-start gap-3"><input type="checkbox" checked={Boolean(selectedNotifications[n.id])} onChange={(e) => setSelectedNotifications((current) => ({ ...current, [n.id]: e.target.checked }))} className="mt-1 h-4 w-4 accent-pink-600" /><div><p className="font-black text-gray-950">{n.title}</p><p className="mt-1 text-sm leading-6 text-gray-600">{n.message}</p></div></div>{!n.read && <span className="rounded-full bg-pink-600 px-2 py-1 text-[10px] font-black text-white">NEW</span>}</div><p className="mt-3 text-xs font-bold text-gray-400">{longDateTime(n.createdAt)}</p></div>)}</div></div>}
                 </Section>
               )}
             </div>

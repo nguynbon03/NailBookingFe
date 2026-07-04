@@ -230,7 +230,7 @@ export default function CalendarReportsPage() {
     }
   };
 
-  const connectUrl = env.google?.connectUrl || `${API_BASE}/api/auth/google?calendar=1&next=/admin/google-sync`;
+  const connectUrl = env.google?.connectUrl || "#";
 
   return (
     <div className="space-y-5 pb-10">
@@ -240,7 +240,7 @@ export default function CalendarReportsPage() {
             <p className="text-xs font-black uppercase tracking-[0.18em] text-pink-600">Owner setup</p>
             <h1 className="mt-2 text-2xl font-black text-gray-950 sm:text-3xl">Calendar & Daily Reports</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
-              Connect the shop Gmail calendar if you want auto calendar sync. For owner/admin notifications and daily revenue PDF, entering one Gmail address below is enough.
+              There are two separate steps here: (1) enter one owner/admin Gmail to receive alerts and revenue PDFs, and (2) connect the actual shop Gmail account if you want live Google Calendar sync.
             </p>
           </div>
           <button onClick={load} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 hover:bg-gray-50">
@@ -259,7 +259,7 @@ export default function CalendarReportsPage() {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.05fr_.95fr]">
-        <Section title="Owner Gmail" subtitle="This one Gmail receives important ops alerts and the daily PDF revenue report.">
+        <Section title="Owner Gmail for alerts & PDF reports" subtitle="This email only receives admin alerts and revenue PDFs. Typing an email here does not connect Google Calendar by itself.">
           {loading ? <div className="py-10 text-center text-gray-400">Loading...</div> : (
             <div className="space-y-4">
               <label className="block">
@@ -302,7 +302,7 @@ export default function CalendarReportsPage() {
           )}
         </Section>
 
-        <Section title="Shop Gmail Calendar" subtitle="Staff availability only appears after each staff member adds their own working hours.">
+        <Section title="Shop Gmail Calendar" subtitle="This is a separate Google sign-in step for the real calendar account that should receive live booking updates.">
           <div className="space-y-4">
             <Toggle
               checked={settings.syncEnabled && settings.googleSyncEnabled}
@@ -314,11 +314,12 @@ export default function CalendarReportsPage() {
             <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-600">
               <div className="flex items-center gap-2 font-black text-gray-900"><CalendarDays size={16} /> Calendar status</div>
               <p className="mt-2 text-xs leading-5">Connected Gmail accounts: {activeConnectionCount}. Last update: {shortDate(settings.lastSyncAt)}.</p>
+              <p className="mt-2 text-xs leading-5 text-gray-500">Workflow: connect the shop Gmail here once, then turn sync on. Staff availability appears after each staff member saves their rota, and confirmed bookings update the calendar automatically.</p>
               <p className="mt-2 text-xs leading-5 text-gray-500">If Google shows <b>redirect_uri_mismatch</b>, whitelist this exact callback URI in Google Cloud:</p>
               <code className="mt-2 block overflow-x-auto rounded-xl bg-white px-3 py-2 text-[11px] font-bold text-pink-700">{env.google?.redirectUri || `${API_BASE}/api/auth/callback/google`}</code>
             </div>
             <div className="flex flex-wrap gap-2">
-              <a href={connectUrl} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-4 text-sm font-black text-white hover:bg-gray-800"><LinkIcon size={16} />Connect Gmail Calendar</a>
+              <a href={connectUrl} onClick={(e) => { if (!env.google?.connectUrl) e.preventDefault(); }} className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-black ${env.google?.connectUrl ? "bg-gray-900 text-white hover:bg-gray-800" : "cursor-not-allowed bg-gray-200 text-gray-500"}`}><LinkIcon size={16} />Connect Gmail Calendar</a>
               <button onClick={exportCalendar} disabled={busy === "calendar"} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 hover:bg-gray-50 disabled:opacity-50"><Download size={16} />Download calendar file</button>
             </div>
           </div>

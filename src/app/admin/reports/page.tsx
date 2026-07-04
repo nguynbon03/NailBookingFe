@@ -8,6 +8,7 @@ type RevenueReport = {
   range: { period: string; label: string };
   ownerEmail?: string;
   summary: Record<string, any>;
+  staffTotals: Array<{ staff: string; bookingCount: number; completedCount: number; confirmedCount: number; revenue: number }>;
   serviceTotals: Array<{ service: string; count: number; revenue: number }>;
   bankEntries: Array<{ id: string; transactionDate: string; description: string; reference?: string | null; amount: number; type: string; matchedBookingId?: string | null; matchedConfidence?: number | null }>;
   bookings: Array<{ reference: string; date: string; time: string; customerName: string; status: string; totalPrice: number; staff: string; services: string }>;
@@ -232,7 +233,13 @@ export default function AdminReportsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-100"><b className="text-gray-900">Staff revenue</b><span className="text-xs text-gray-400 ml-2">who generated the money in this range</span></div>
+          {loading ? <div className="py-12 text-center text-gray-400">Loading...</div> : (report?.staffTotals || []).length === 0 ? <div className="p-4 text-gray-400 text-sm">No staff revenue in this range.</div> : (
+            <div className="divide-y divide-gray-100">{report!.staffTotals.map((s) => <div key={s.staff} className="p-4 flex items-start justify-between gap-3"><div><p className="font-bold text-gray-700">{s.staff}</p><p className="mt-1 text-xs text-gray-400">{s.bookingCount} booking(s) · completed {s.completedCount} · confirmed {s.confirmedCount}</p></div><span className="text-sm font-black text-emerald-600">{money(s.revenue)}</span></div>)}</div>
+          )}
+        </div>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-100"><b className="text-gray-900">Top services</b><span className="text-xs text-gray-400 ml-2">{report?.range.label}</span></div>
           {loading ? <div className="py-12 text-center text-gray-400">Loading...</div> : (report?.serviceTotals || []).length === 0 ? <div className="p-4 text-gray-400 text-sm">No service revenue.</div> : (
