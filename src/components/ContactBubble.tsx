@@ -154,9 +154,16 @@ export default function ContactBubble() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, open, sending]);
 
+  const hasConversationStarted = messages.some((message) => message.role === "user");
+  const showDirectContactLinks = mode === "customer" && !hasConversationStarted && showStarters && !draftImageUrl;
+
   const panelWidth = mode === "customer"
     ? (showStarters ? "w-[min(calc(100vw-1rem),24rem)]" : "w-[min(calc(100vw-1rem),28rem)]")
     : (showStarters ? "w-[min(calc(100vw-1rem),26rem)]" : "w-[min(calc(100vw-1rem),32rem)]");
+
+  const messageAreaClassName = hasConversationStarted
+    ? "max-h-[60vh] min-h-[18rem]"
+    : "max-h-[52vh]";
 
   const sendMessage = async (text?: string) => {
     const raw = String(text ?? input).trim();
@@ -244,7 +251,7 @@ export default function ContactBubble() {
             )}
           </div>
 
-          <div className="max-h-[52vh] space-y-3 overflow-y-auto bg-[#fffafc] px-4 py-4">
+          <div className={`${messageAreaClassName} space-y-3 overflow-y-auto bg-[#fffafc] px-4 py-4`}>
             {messages.map((message, index) => (
               <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
@@ -320,7 +327,7 @@ export default function ContactBubble() {
               </button>
             </div>
 
-            {mode === "customer" ? (
+            {showDirectContactLinks ? (
               <div className="mt-3 grid gap-2">
                 {contactLinks.map((item) => {
                   const Icon = item.icon;
@@ -344,11 +351,11 @@ export default function ContactBubble() {
                   );
                 })}
               </div>
-            ) : (
+            ) : mode !== "customer" ? (
               <div className="mt-3 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-500">
                 Internal mode uses live role-aware context from the current page, signed-in account, and current operational snapshot.
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}
