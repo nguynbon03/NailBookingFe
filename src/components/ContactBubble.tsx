@@ -46,26 +46,26 @@ function modeMeta(mode: ChatMode): ModeMeta {
   if (mode === "admin") {
     return {
       title: "Nail Lounge Admin Assistant",
-      subtitle: "Live ops answers for bookings, revenue, staff and leave.",
-      placeholder: "Hỏi doanh thu, lịch hôm nay, leave, booking cần xử lý...",
+      subtitle: "Live operational answers for revenue, bookings, staffing, leave, and priorities.",
+      placeholder: "Ask about revenue, today’s bookings, staff gaps, leave queue, or an uploaded issue photo...",
       launchLabel: "Ask assistant",
-      intro: "Chào anh/chị. Em có thể trả lời nhanh về doanh thu, booking, leave, staff workload và việc cần ưu tiên từ dữ liệu live hiện có.",
-      starters: ["Hôm nay doanh thu bao nhiêu?", "Có booking nào chưa phân staff?", "Leave nào đang chờ duyệt?", "Tóm tắt lịch hôm nay"],
+      intro: "Hi. I can help with live operational questions, booking pressure, leave requests, staffing decisions, and the most urgent next actions from the current data snapshot.",
+      starters: ["What is today’s counted revenue?", "Which bookings are still unassigned?", "What leave requests are waiting?", "Summarise today’s operations"],
       sendLabel: "Send",
-      allowImage: false,
+      allowImage: true,
     };
   }
 
   if (mode === "staff") {
     return {
       title: "Nail Lounge Staff Assistant",
-      subtitle: "Quick help for schedule, jobs, leave and workload.",
-      placeholder: "Hỏi ca làm, khách tiếp theo, leave, doanh thu hôm nay...",
+      subtitle: "Quick help for schedule, assigned clients, leave, availability, and workload.",
+      placeholder: "Ask about your shift, next client, leave status, availability, or upload a reference photo...",
       launchLabel: "Ask assistant",
-      intro: "Chào bạn. Mình có thể giúp xem lịch làm, khách tiếp theo, leave ticket, availability và giá trị booking/revenue hiện có của bạn.",
-      starters: ["Hôm nay em có mấy khách?", "Doanh thu hôm nay của em?", "Ca tiếp theo là gì?", "Leave của em đang trạng thái nào?"],
+      intro: "Hi. I can help with your schedule, next clients, leave status, availability, workload, and a cautious review of any nail photo or screenshot you upload.",
+      starters: ["How many clients do I have today?", "What is my next booking?", "What is the status of my leave requests?", "Show my workload summary"],
       sendLabel: "Send",
-      allowImage: false,
+      allowImage: true,
     };
   }
 
@@ -92,7 +92,10 @@ function defaultImagePrompt(mode: ChatMode) {
   if (mode === "customer") {
     return "Can you look at this photo and tell me whether the salon may be able to help, and whether I should contact the salon first?";
   }
-  return "Please look at this image and tell me what matters operationally.";
+  if (mode === "staff") {
+    return "Please review this image and tell me what matters for today’s work, booking notes, or escalation.";
+  }
+  return "Please review this image and tell me what matters operationally, what is confirmed, and what should be escalated.";
 }
 
 async function resizeImageToDataUrl(file: File) {
@@ -183,16 +186,15 @@ export default function ContactBubble() {
         }),
       });
       const data = await res.json().catch(() => ({}));
-      const answer = String(data?.answer || data?.error || (mode === "customer" ? "Sorry, I could not answer that just now." : "Mình chưa trả lời được câu này ngay lúc này.")).trim();
+      const answer = String(data?.answer || data?.error || "Sorry, I could not answer that just now.").trim();
       setMessages((current) => [...current, { role: "assistant", content: answer }]);
     } catch {
       setMessages((current) => [
         ...current,
         {
           role: "assistant",
-          content: mode === "customer"
-            ? "Sorry, the assistant is unavailable right now. Please use WhatsApp or Messenger below."
-            : "Assistant đang tạm gián đoạn. Anh/chị có thể refresh trang hoặc dùng luồng xử lý thủ công tạm thời.",
+          content:
+            "Sorry, the assistant is unavailable right now. Please refresh the page or use the direct contact buttons if you need an immediate answer.",
         },
       ]);
     } finally {
@@ -344,7 +346,7 @@ export default function ContactBubble() {
               </div>
             ) : (
               <div className="mt-3 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-500">
-                Internal mode uses live role-aware context from the current page and signed-in account.
+                Internal mode uses live role-aware context from the current page, signed-in account, and current operational snapshot.
               </div>
             )}
           </div>
