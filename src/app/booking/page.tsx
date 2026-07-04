@@ -308,6 +308,15 @@ export default function BookingPage() {
     const depositRequired = verificationInfo?.status === "DEPOSIT_REQUIRED";
     const emailSent = Number(bookingResult?.notificationDelivery?.email?.sent || 0) > 0;
     const emailProblem = bookingResult?.notificationDelivery?.email?.error || bookingResult?.notificationDelivery?.email?.status;
+    const whatsappSent = Number(bookingResult?.notificationDelivery?.whatsapp?.sent || 0) > 0;
+    const whatsappProblem = bookingResult?.notificationDelivery?.whatsapp?.error || bookingResult?.notificationDelivery?.whatsapp?.status;
+    const deliveredChannels = [
+      emailSent ? `email ${formData.email}` : null,
+      whatsappSent ? `WhatsApp ${formData.phone}` : null,
+    ].filter(Boolean) as string[];
+    const deliverySummary = deliveredChannels.length > 1
+      ? `${deliveredChannels.slice(0, -1).join(", ")} and ${deliveredChannels[deliveredChannels.length - 1]}`
+      : deliveredChannels[0] || "";
     return (
       <>
         <Navbar />
@@ -320,17 +329,23 @@ export default function BookingPage() {
               <h1 className="text-3xl font-black text-gray-900 mb-3">Booking Request Saved</h1>
               <p className="text-gray-600 mb-2 break-words">Thank you, <span className="font-bold text-gray-900">{formData.name}</span>. Your booking request has been received.</p>
               {depositRequired ? (
-                emailSent ? (
-                  <p className="text-sm text-orange-600 font-bold mb-5 break-words">Anti-spam protection requires a deposit for this booking. We sent the secure deposit link to <span className="underline decoration-orange-200">{formData.email}</span>. Use reference {reference}; staff assignment happens after the shop confirms the deposit.</p>
+                deliveredChannels.length ? (
+                  <div className="mb-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-left text-sm text-orange-800">
+                    <p className="font-black break-words">Anti-spam protection requires a deposit for this booking. We sent the secure deposit link to <span className="underline decoration-orange-200">{deliverySummary}</span>. Use reference {reference}; staff assignment happens after the shop confirms the deposit.</p>
+                    {emailSent || whatsappSent ? <p className="mt-2 text-xs break-words opacity-80">Delivery status: Email {emailSent ? "sent" : "not sent yet"} · WhatsApp {whatsappSent ? "sent" : "not sent yet"}</p> : null}
+                    {!emailSent && emailProblem ? <p className="mt-1 text-xs break-words opacity-80">Email status: {String(emailProblem)}</p> : null}
+                    {!whatsappSent && whatsappProblem ? <p className="mt-1 text-xs break-words opacity-80">WhatsApp status: {String(whatsappProblem)}</p> : null}
+                  </div>
                 ) : (
                   <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left text-sm text-amber-800">
-                    <p className="font-black">Deposit link email has not been sent yet.</p>
+                    <p className="font-black">Deposit link notifications have not been sent yet.</p>
                     <p className="mt-1 break-words">Your booking is saved in Admin as <span className="font-bold">Deposit required</span>. The shop can still see it and send/confirm the deposit manually.</p>
                     {emailProblem ? <p className="mt-2 text-xs break-words opacity-80">Mail status: {String(emailProblem)}</p> : null}
+                    {whatsappProblem ? <p className="mt-1 text-xs break-words opacity-80">WhatsApp status: {String(whatsappProblem)}</p> : null}
                   </div>
                 )
               ) : (
-                <p className="text-sm text-sky-600 font-bold mb-5 break-words">Your request has been sent to the staff portal. A staff member will accept it if they can take this slot; you will receive a confirmation email after it is assigned.</p>
+                <p className="text-sm text-sky-600 font-bold mb-5 break-words">Your request has been sent to the staff portal. A staff member will accept it if they can take this slot; you will receive the next booking update by email and WhatsApp when available.</p>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
@@ -347,6 +362,12 @@ export default function BookingPage() {
                   <p><span className="font-bold">Services:</span> {allSelectedServiceObjects.map(s => s.name).join(", ") || "Selected service(s)"}</p>
                   <p><span className="font-bold">People:</span> {numPeople}</p>
                   <p><span className="font-bold">Email:</span> {formData.email}</p>
+                  <p><span className="font-bold">Phone:</span> {formData.phone}</p>
+                </div>
+                <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-700 space-y-1 sm:col-span-2">
+                  <p className="text-xs uppercase tracking-wide text-gray-400 font-black">Notification delivery</p>
+                  <p><span className="font-bold">Email:</span> {emailSent ? "Sent" : emailProblem ? `Not sent (${String(emailProblem)})` : "Pending"}</p>
+                  <p><span className="font-bold">WhatsApp:</span> {whatsappSent ? "Sent" : whatsappProblem ? `Not sent (${String(whatsappProblem)})` : "Pending"}</p>
                 </div>
                 <div className="rounded-2xl border border-pink-100 bg-white p-4 text-sm text-gray-700 space-y-2 sm:col-span-2">
                   <div className="flex items-center justify-between border-b border-pink-50 pb-2">
