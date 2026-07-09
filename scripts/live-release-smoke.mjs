@@ -125,10 +125,26 @@ async function calendarChecks(base, label, token) {
     return;
   }
   const authHeader = ['Bear', 'er '].join('') + token;
-  const r = await request(`${base}/api/admin/calendar-sync`, { headers: { Authorization: authHeader } });
-  const redirectUri = r.json?.env?.google?.redirectUri || '';
-  const ok = r.ok && r.json?.settings && r.json?.env?.google?.configured === true && redirectUri.includes('/api/auth/callback/google');
-  add(`${label} calendar-sync admin API`, ok, `HTTP ${r.status}; googleConfigured=${r.json?.env?.google?.configured}; redirectUri=${redirectUri}`);
+  const headers = Object.fromEntries([['Authorization', authHeader]]);
+
+  const settings = await request(`${base}/api/admin/calendar-sync`, { headers });
+  const redirectUri = settings.json?.env?.google?.redirectUri || '';
+  const settingsOk = settings.ok && settings.json?.settings && settings.json?.env?.google?.configured === true && redirectUri.includes('/api/auth/callback/google');
+  add(`${label} calendar-sync admin API`, settingsOk, `HTTP ${settings.status}; googleConfigured=${settings.json?.env?.google?.configured}; redirectUri=${redirectUri}`);
+
+  await expectPage(base, '/admin/calendar', `${label} admin calendar page`);
+  await expectPage(base, '/admin/google-sync', `${label} google-sync page`);
+
+  const today = new Date();
+  const from = today.toISOString().slice(0, 10);
+  const to = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const schedule = await request(`${base}/api/staff/schedule?from=${from}&to=${to}`, { headers });
+  const scheduleOk = schedule.ok && (Array.isArray(schedule.json?.staff) || Array.isArray(schedule.json?.events) || typeof schedule.json === 'object');
+  add(`${label} staff schedule API`, scheduleOk, `HTTP ${schedule.status}; keys=${schedule.json ? Object.keys(schedule.json).slice(0, 8).join(',') : 'non-json'}`);
+
+  const ics = await request(`${base}/api/staff/schedule/export?format=ics&from=${from}&to=${to}`, { headers });
+  const icsOk = ics.ok && (ics.text.includes('BEGIN:VCALENDAR') || (ics.headers.get('content-type') || '').includes('text/calendar'));
+  add(`${label} staff schedule ICS export`, icsOk, `HTTP ${ics.status}; contentType=${ics.headers.get('content-type') || ''}`);
 }
 
 async function availabilityChecks(base, label) {
