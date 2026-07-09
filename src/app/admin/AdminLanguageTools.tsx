@@ -290,6 +290,13 @@ function withWhitespace(original: string, replacement: string) {
 export function translateAdminText(value: string, lang: AdminLang) {
   const trimmed = value.trim().replace(/\s+/g, " ");
   if (!trimmed) return value;
+  if (lang === "vi") {
+    const ratingCount = trimmed.match(/^(\d+) reviews?$/i);
+    if (ratingCount) return withWhitespace(value, `${ratingCount[1]} đánh giá`);
+  } else {
+    const ratingCount = trimmed.match(/^(\d+) đánh giá$/i);
+    if (ratingCount) return withWhitespace(value, `${ratingCount[1]} ${ratingCount[1] === "1" ? "review" : "reviews"}`);
+  }
   const replacement = lang === "vi" ? adminViText[trimmed] : adminEnText[trimmed];
   return replacement ? withWhitespace(value, replacement) : value;
 }
