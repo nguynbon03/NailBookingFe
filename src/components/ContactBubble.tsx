@@ -79,8 +79,8 @@ function modeMeta(mode: ChatMode): ModeMeta {
       subtitle: "Live operational answers for revenue, bookings, staffing, leave, and priorities.",
       placeholder: "Ask about revenue, today’s bookings, staff gaps, leave queue, or an uploaded issue photo...",
       launchLabel: "Ask assistant",
-      intro: "Hi. I can help with live operational questions, booking pressure, leave requests, staffing decisions, and the most urgent next actions from the current data snapshot.",
-      starters: ["What is today’s counted revenue?", "Which bookings are still unassigned?", "What leave requests are waiting?", "Summarise today’s operations"],
+      intro: "Hi. I can help with live operational questions, booking pressure, leave requests, staffing decisions, account totals, promo codes, revenue, calendar status, and the most urgent next actions from the live database context.",
+      starters: ["How many accounts are in the system?", "How many promo codes are active?", "What is today’s counted revenue?", "Summarise today’s operations"],
       sendLabel: "Send",
       allowImage: true,
     };
@@ -111,10 +111,9 @@ function modeMeta(mode: ChatMode): ModeMeta {
   };
 }
 
-function detectMode(pathname: string | null, role?: string | null): ChatMode {
-  const page = String(pathname || "").toLowerCase();
-  if (page.startsWith("/admin") || role === "ADMIN" || role === "MANAGER") return "admin";
-  if (page.startsWith("/staff") || role === "STAFF") return "staff";
+function detectMode(_pathname: string | null, role?: string | null): ChatMode {
+  if (role === "ADMIN" || role === "MANAGER") return "admin";
+  if (role === "STAFF") return "staff";
   return "customer";
 }
 
@@ -425,7 +424,7 @@ export default function ContactBubble() {
               </div>
             ) : mode !== "customer" ? (
               <div className="mt-3 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-500">
-                Internal mode uses live role-aware context from the current page, signed-in account, and current operational snapshot.
+                Live role-aware mode uses signed-in account permissions and live database context. Admin/Manager can ask management questions; customer-facing users only receive salon guidance.
               </div>
             ) : null}
           </div>
