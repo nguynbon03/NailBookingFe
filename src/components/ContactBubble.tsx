@@ -3,6 +3,7 @@
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { API_BASE } from "@/lib/api";
 
 type Message = { role: "user" | "assistant"; content: string; imageUrl?: string | null };
 type ChatMode = "customer" | "staff" | "admin";
@@ -41,6 +42,19 @@ const contactLinks = [
     icon: InstagramIcon,
   },
 ];
+
+const APP_EDITION = String(process.env.NEXT_PUBLIC_APP_EDITION || "pro").toLowerCase();
+const SHOP_LANGUAGE = String(process.env.NEXT_PUBLIC_SHOP_LANGUAGE || "en").toLowerCase();
+
+function publicFlag(value: string | undefined, fallback: boolean) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return fallback;
+}
+
+const CHATBOT_ENABLED = publicFlag(process.env.NEXT_PUBLIC_ENABLE_CHATBOT, APP_EDITION !== "basic");
+const SOCIAL_BUBBLES_ENABLED = publicFlag(process.env.NEXT_PUBLIC_ENABLE_SOCIAL_BUBBLES, APP_EDITION !== "basic");
 
 function modeMeta(mode: ChatMode): ModeMeta {
   if (mode === "admin") {
@@ -128,7 +142,8 @@ async function resizeImageToDataUrl(file: File) {
 }
 
 export default function ContactBubble() {
-  const [open, setOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [socialOpen, setSocialOpen] = useState(false);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [showStarters, setShowStarters] = useState(true);
@@ -152,10 +167,10 @@ export default function ContactBubble() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, open, sending]);
+  }, [messages, chatOpen, sending]);
 
   const hasConversationStarted = messages.some((message) => message.role === "user");
-  const showDirectContactLinks = mode === "customer" && !hasConversationStarted && showStarters && !draftImageUrl;
+  const showDirectContactLinks = !SOCIAL_BUBBLES_ENABLED && mode === "customer" && !hasConversationStarted && showStarters && !draftImageUrl;
 
   const panelWidth = mode === "customer"
     ? (showStarters ? "w-[min(calc(100vw-1rem),24rem)]" : "w-[min(calc(100vw-1rem),28rem)]")
@@ -183,13 +198,14 @@ export default function ContactBubble() {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
 
-      const res = await fetch("/api/api/chatbot", {
+      const res = await fetch(`${API_BASE}/api/chatbot`, {
         method: "POST",
         headers,
         body: JSON.stringify({
           messages: nextMessages.map(({ role, content: bodyContent }) => ({ role, content: bodyContent })),
           page: pathname || "/",
           imageDataUrl: imageUrl,
+          responseLanguage: SHOP_LANGUAGE,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -220,7 +236,7 @@ export default function ContactBubble() {
     try {
       const compressed = await resizeImageToDataUrl(file);
       setDraftImageUrl(compressed);
-      setOpen(true);
+      setChatOpen(true);
       setShowStarters(false);
     } finally {
       setUploadingImage(false);
@@ -228,9 +244,40 @@ export default function ContactBubble() {
     }
   };
 
+  if (!CHATBOT_ENABLED && !SOCIAL_BUBBLES_ENABLED) return null;
+
   return (
     <div className="fixed bottom-3 right-3 z-[70] flex flex-col items-end gap-3 sm:bottom-5 sm:right-5">
-      {open && (
+      {SOCIAL_BUBBLES_ENABLED && socialOpen && (
+        <div className="w-[min(calc(100vw-1rem),22rem)] overflow-hidden rounded-[1.75rem] border border-pink-100 bg-white p-3 shadow-2xl shadow-pink-200/40">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <div>
+              <p className="text-sm font-black text-gray-900">Contact The Nail Lounge</p>
+              <p className="mt-1 text-xs text-gray-500">Choose a direct social channel.</p>
+            </div>
+            <button onClick={() => setSocialOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 text-gray-500">×</button>
+          </div>
+          <div className="grid gap-2">
+            {contactLinks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm">
+                  <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg ${item.className}`}>
+                    <Icon />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-gray-900">{item.label}</span>
+                    <span className="block text-xs text-gray-500">{item.helper}</span>
+                  </span>
+                  <span className="text-pink-400 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {CHATBOT_ENABLED && chatOpen && (
         <div className={`${panelWidth} overflow-hidden rounded-[2rem] border border-pink-100 bg-white shadow-2xl shadow-pink-200/40`}>
           <div className="bg-gradient-to-r from-pink-50 via-white to-rose-50 px-4 py-4">
             <div className="flex items-start justify-between gap-3">
@@ -238,7 +285,7 @@ export default function ContactBubble() {
                 <p className="text-sm font-black text-gray-900">{meta.title}</p>
                 <p className="mt-1 text-xs leading-5 text-gray-500">{meta.subtitle}</p>
               </div>
-              <button onClick={() => setOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/80 bg-white text-gray-500 shadow-sm">×</button>
+              <button onClick={() => setChatOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/80 bg-white text-gray-500 shadow-sm">×</button>
             </div>
             {showStarters && (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -360,21 +407,48 @@ export default function ContactBubble() {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="group relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-rose-500 text-white shadow-2xl shadow-rose-300/60 transition-all hover:scale-105 focus:outline-none focus:ring-4 focus:ring-pink-200"
-        aria-label={open ? "Close chat assistant" : "Open chat assistant"}
-        aria-expanded={open}
-      >
-        <span className="absolute inset-0 rounded-full bg-rose-400/40 animate-ping" />
-        <span className="relative flex h-16 w-16 items-center justify-center rounded-full">{open ? <CloseIcon /> : <ChatIcon />}</span>
-        {!open && (
-          <span className="absolute right-[4.5rem] hidden whitespace-nowrap rounded-full bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg sm:block">
-            {meta.launchLabel}
-          </span>
+      <div className="flex items-end gap-3">
+        {SOCIAL_BUBBLES_ENABLED && (
+          <button
+            type="button"
+            onClick={() => {
+              setSocialOpen((value) => !value);
+              if (!socialOpen) setChatOpen(false);
+            }}
+            className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-sky-500 text-white shadow-2xl shadow-sky-300/50 transition-all hover:scale-105 focus:outline-none focus:ring-4 focus:ring-sky-200"
+            aria-label={socialOpen ? "Close social contact links" : "Open social contact links"}
+            aria-expanded={socialOpen}
+          >
+            <span className="relative flex h-14 w-14 items-center justify-center rounded-full">{socialOpen ? <CloseIcon /> : <MessengerIcon />}</span>
+            {!socialOpen && (
+              <span className="absolute right-[4rem] hidden whitespace-nowrap rounded-full bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg sm:block">
+                Social links
+              </span>
+            )}
+          </button>
         )}
-      </button>
+
+        {CHATBOT_ENABLED && (
+          <button
+            type="button"
+            onClick={() => {
+              setChatOpen((value) => !value);
+              if (!chatOpen) setSocialOpen(false);
+            }}
+            className="group relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-rose-500 text-white shadow-2xl shadow-rose-300/60 transition-all hover:scale-105 focus:outline-none focus:ring-4 focus:ring-pink-200"
+            aria-label={chatOpen ? "Close chat assistant" : "Open chat assistant"}
+            aria-expanded={chatOpen}
+          >
+            <span className="absolute inset-0 rounded-full bg-rose-400/40 animate-ping" />
+            <span className="relative flex h-16 w-16 items-center justify-center rounded-full">{chatOpen ? <CloseIcon /> : <ChatIcon />}</span>
+            {!chatOpen && (
+              <span className="absolute right-[4.5rem] hidden whitespace-nowrap rounded-full bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg sm:block">
+                {meta.launchLabel}
+              </span>
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

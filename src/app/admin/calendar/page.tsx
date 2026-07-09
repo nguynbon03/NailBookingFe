@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import { CalendarDays, Download, RefreshCw, User } from "lucide-react";
+import { API_BASE } from "@/lib/api";
 
-const API = "https://bookingnail.overpowers.agency";
+const API = API_BASE;
 
 type Staff = { id: string; name: string; role?: string };
 type Booking = { id: string; customerName: string; date: string; time: string; status: string; customerPhone?: string };
