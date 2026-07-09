@@ -180,7 +180,7 @@ export default function AdminStaff() {
                   <div className="mt-3 rounded-2xl border border-amber-100 bg-amber-50/70 p-3" data-admin-staff-rating="staff-rating-v20260709">
                     <div className="flex items-center justify-between gap-2">
                       <span className="inline-flex items-center gap-1 text-sm font-black text-amber-700"><Star size={15} fill="currentColor" /> {s.ratingCount ? `${Number(s.ratingAverage || 0).toFixed(2)}/5` : "No ratings yet"}</span>
-                      <span className="text-[11px] font-bold text-amber-600">{s.ratingCount || 0} review{(s.ratingCount || 0) === 1 ? "" : "s"}</span>
+                      <span className="text-[11px] font-bold text-amber-600">{`${s.ratingCount || 0} ${(s.ratingCount || 0) === 1 ? "review" : "reviews"}`}</span>
                     </div>
                     {s.latestReview?.comment && <p className="mt-2 line-clamp-2 text-xs leading-5 text-gray-600">“{s.latestReview.comment}”</p>}
                   </div>
