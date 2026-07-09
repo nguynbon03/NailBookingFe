@@ -34,7 +34,7 @@ function bookingReference(id?: string) {
   return id ? `NL-${id.slice(-8).toUpperCase()}` : "NL-PENDING";
 }
 
-type Staff = { id: string; name: string; email: string; role: string; active: boolean; avatar?: string | null };
+type Staff = { id: string; name: string; email: string; role: string; active: boolean; avatar?: string | null; ratingAverage?: number | null; ratingCount?: number };
 type Slot = { time: string; availableStaffCount: number; staffIds: string[] };
 
 export default function BookingPage() {
@@ -576,6 +576,9 @@ export default function BookingPage() {
                             </span>
                             <span className="min-w-0">
                               <span className="block truncate">{st.name}</span>
+                              <span className="mt-0.5 flex items-center gap-1 text-[10px] text-amber-600">
+                                <Star size={11} fill="currentColor" /> {st.ratingCount ? `${Number(st.ratingAverage || 0).toFixed(1)}/5 · ${st.ratingCount}` : "New"}
+                              </span>
                               <span className={cn("mt-1 w-2 h-2 rounded-full inline-block", st.active ? "bg-green-500" : "bg-red-400")} />
                             </span>
                           </button>

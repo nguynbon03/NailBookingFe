@@ -127,6 +127,8 @@ export const api = {
     verify: (token: string) => fetchAPI("/api/bookings/verify", { method: "POST", body: JSON.stringify({ token }) }),
     requestCancel: (id: string, reason: string) =>
       fetchAPI("/api/bookings/cancel-request", { method: "POST", body: JSON.stringify({ id, reason }) }),
+    review: (data: { bookingId: string; rating: number; comment?: string; publicComment?: boolean }) =>
+      fetchAPI("/api/bookings/review", { method: "POST", body: JSON.stringify(data) }),
     updateStatus: (id: string, status: string, staffId?: string | null) =>
       fetchAPI("/api/bookings", { method: "PUT", body: JSON.stringify({ id, status, staffId }) }),
   },
