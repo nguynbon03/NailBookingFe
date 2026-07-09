@@ -71,6 +71,88 @@ type WeekDraftItem = { enabled: boolean; startTime: string; endTime: string };
 type LeaveRequest = { id: string; startDate: string; endDate: string; daysCount: number; reason: string; status: string; managerNote?: string | null; reviewedBy?: string | null; reviewedAt?: string | null; createdAt: string };
 type DashboardStats = { available: number; assigned: number; history: number; completed: number; revenueToday?: number; revenueWeek?: number; revenueMonth?: number; revenueTotal?: number };
 type ViewKey = "requests" | "schedule" | "history" | "availability" | "leave" | "notifications";
+type PortalLang = "en" | "vi";
+
+const staffCopy = {
+  en: {
+    portal: "Staff Portal",
+    dashboard: "Work dashboard",
+    hero: "Accept jobs, see today's schedule, review booking history, set availability, and submit leave tickets from one simple dashboard.",
+    refresh: "Refresh",
+    logout: "Logout",
+    signedInAs: "Signed in as",
+    navRequests: "Open requests",
+    navSchedule: "My schedule",
+    navHistory: "Booking history",
+    navAvailability: "Availability",
+    navLeave: "Leave tickets",
+    navNotifications: "Notifications",
+    open: "Open", assigned: "Assigned", today: "Today", history: "History", unread: "Unread", revenueToday: "Revenue today", revenueWeek: "Revenue this week", revenueTotal: "Revenue total",
+    rotaTitle: "Weekly rota",
+    rotaSubtitle: "Compact schedule setup: turn on the days you work, set start/end time, then save once.",
+    weekStarts: "Week starts",
+    workingDays: "Working days",
+    activeSlots: "Saved slots",
+    quickSetup: "Quick setup",
+    weekdays: "Mon-Fri 09-18",
+    copyFirst: "Copy first working day",
+    clearWeek: "Clear week",
+    off: "Off",
+    working: "Working",
+    start: "Start",
+    end: "End",
+    saveWeek: "Save week",
+    savingWeek: "Saving...",
+    extraTitle: "Extra shift",
+    extraSubtitle: "Add a second block or one special date only when needed.",
+    repeatEvery: "Repeat every",
+    specificDate: "Specific date",
+    addSlot: "Add slot",
+    savedTitle: "Saved hours",
+    savedSubtitle: "Your current working slots.",
+    noHoursTitle: "No hours saved yet",
+    noHoursText: "Turn on working days and save the week so bookings can be assigned correctly.",
+  },
+  vi: {
+    portal: "Cổng nhân viên",
+    dashboard: "Bảng công việc",
+    hero: "Nhận lịch, xem việc hôm nay, kiểm tra lịch sử, đăng ký giờ làm và gửi yêu cầu nghỉ trong một màn hình đơn giản.",
+    refresh: "Tải lại",
+    logout: "Đăng xuất",
+    signedInAs: "Đang đăng nhập",
+    navRequests: "Lịch chờ nhận",
+    navSchedule: "Lịch của tôi",
+    navHistory: "Lịch sử booking",
+    navAvailability: "Giờ làm",
+    navLeave: "Xin nghỉ",
+    navNotifications: "Thông báo",
+    open: "Đang mở", assigned: "Đã nhận", today: "Hôm nay", history: "Lịch sử", unread: "Chưa đọc", revenueToday: "Doanh thu hôm nay", revenueWeek: "Doanh thu tuần này", revenueTotal: "Tổng doanh thu",
+    rotaTitle: "Đăng ký lịch làm",
+    rotaSubtitle: "Giao diện gọn: bật ngày đi làm, chọn giờ bắt đầu/kết thúc, rồi lưu một lần.",
+    weekStarts: "Tuần bắt đầu",
+    workingDays: "Ngày làm",
+    activeSlots: "Ca đã lưu",
+    quickSetup: "Thiết lập nhanh",
+    weekdays: "Thứ 2-6 09-18",
+    copyFirst: "Copy ngày đầu",
+    clearWeek: "Xóa tuần",
+    off: "Nghỉ",
+    working: "Đi làm",
+    start: "Bắt đầu",
+    end: "Kết thúc",
+    saveWeek: "Lưu lịch tuần",
+    savingWeek: "Đang lưu...",
+    extraTitle: "Ca bổ sung",
+    extraSubtitle: "Chỉ dùng khi cần thêm ca thứ hai hoặc một ngày đặc biệt.",
+    repeatEvery: "Lặp lại mỗi",
+    specificDate: "Ngày cụ thể",
+    addSlot: "Thêm ca",
+    savedTitle: "Giờ đã lưu",
+    savedSubtitle: "Các khung giờ làm hiện tại.",
+    noHoursTitle: "Chưa có giờ làm",
+    noHoursText: "Bật ngày đi làm và lưu tuần để hệ thống phân lịch chính xác.",
+  },
+} as const;
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const rejectReasons = ["Staff have problem", "Time not available", "Service skill mismatch", "Too busy", "Other"];
@@ -281,6 +363,8 @@ export default function StaffPortalPage() {
   const [rejectTarget, setRejectTarget] = useState<Booking | null>(null);
   const [rejectReason, setRejectReason] = useState(rejectReasons[0]);
   const [rejectOther, setRejectOther] = useState("");
+  const [lang, setLang] = useState<PortalLang>("en");
+  const copy = staffCopy[lang];
 
   const allowed = user && ["STAFF", "ADMIN", "MANAGER"].includes(user.role);
   const pendingLeaves = leaveRequests.filter((item) => item.status === "PENDING").length;
@@ -289,6 +373,16 @@ export default function StaffPortalPage() {
   const allNotificationsSelected = notifications.length > 0 && notifications.every((item) => selectedNotifications[item.id]);
   const weekDays = Array.from({ length: 7 }, (_, index) => addDaysISO(weekStart, index));
   const today = todayISO();
+
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? window.localStorage.getItem("nail_staff_lang") : null;
+    if (saved === "en" || saved === "vi") setLang(saved);
+  }, []);
+
+  const switchLang = (next: PortalLang) => {
+    setLang(next);
+    if (typeof window !== "undefined") window.localStorage.setItem("nail_staff_lang", next);
+  };
 
   useEffect(() => {
     setSelectedNotifications((current) => Object.fromEntries(Object.entries(current).filter(([id]) => notifications.some((item) => item.id === id))));
@@ -383,7 +477,7 @@ export default function StaffPortalPage() {
         active: form.active,
       });
       setForm(emptyAvailability);
-      setNotice("Availability slot saved.");
+      setNotice(lang === "vi" ? "Đã lưu ca làm bổ sung." : "Extra shift saved.");
       refresh();
     } catch (err: any) {
       setError(err.message || "Could not save availability");
@@ -397,7 +491,7 @@ export default function StaffPortalPage() {
     for (const date of selectedDates) {
       const slot = weekDraft[date];
       if (!slot?.startTime || !slot?.endTime || slot.startTime >= slot.endTime) {
-        setError(`Please check working hours for ${shortDate(date)}`);
+        setError(lang === "vi" ? `Kiểm tra lại giờ làm cho ${shortDate(date)}` : `Please check working hours for ${shortDate(date)}`);
         return;
       }
     }
@@ -415,7 +509,7 @@ export default function StaffPortalPage() {
           active: true,
         })),
       });
-      setNotice(selectedDates.length ? "Weekly availability saved and old slots for that week were replaced." : "This week was cleared from your saved availability.");
+      setNotice(selectedDates.length ? (lang === "vi" ? "Đã lưu lịch làm tuần và thay thế lịch cũ của tuần này." : "Weekly rota saved and old slots for that week were replaced.") : (lang === "vi" ? "Đã xóa lịch làm của tuần này." : "This week was cleared from your saved availability."));
       refresh();
     } catch (err: any) {
       setError(err.message || "Could not save weekly availability");
@@ -480,17 +574,35 @@ export default function StaffPortalPage() {
     refresh();
   };
 
+  const workingDayCount = weekDays.filter((day) => weekDraft[day]?.enabled).length;
+
+  const applyWeekdaysPreset = () => {
+    setWeekDraft(Object.fromEntries(weekDays.map((day) => {
+      const jsDay = new Date(day + "T00:00:00").getDay();
+      const enabled = jsDay >= 1 && jsDay <= 5;
+      return [day, { enabled, startTime: "09:00", endTime: "18:00" } satisfies WeekDraftItem];
+    })));
+  };
+
+  const copyFirstWorkingDay = () => {
+    const first = weekDays.map((day) => weekDraft[day]).find((slot) => slot?.enabled);
+    if (!first) return;
+    setWeekDraft((current) => Object.fromEntries(weekDays.map((day) => [day, current[day]?.enabled ? { ...current[day], startTime: first.startTime, endTime: first.endTime } : (current[day] || { enabled: false, startTime: first.startTime, endTime: first.endTime })])));
+  };
+
+  const clearWeek = () => setWeekDraft(Object.fromEntries(weekDays.map((day) => [day, { enabled: false, startTime: "09:00", endTime: "18:00" } satisfies WeekDraftItem])));
+
   const navItems: { key: ViewKey; label: string; count?: number; icon: React.ReactNode }[] = [
-    { key: "requests", label: "Open requests", count: availableBookings.length, icon: <ClipboardList size={17} /> },
-    { key: "schedule", label: "My schedule", count: myBookings.length, icon: <CalendarDays size={17} /> },
-    { key: "history", label: "Booking history", count: historyBookings.length, icon: <History size={17} /> },
-    { key: "availability", label: "Availability", count: availability.length, icon: <CalendarCheck size={17} /> },
-    { key: "leave", label: "Leave tickets", count: pendingLeaves, icon: <Plane size={17} /> },
-    { key: "notifications", label: "Notifications", count: unread, icon: <Bell size={17} /> },
+    { key: "requests", label: copy.navRequests, count: availableBookings.length, icon: <ClipboardList size={17} /> },
+    { key: "schedule", label: copy.navSchedule, count: myBookings.length, icon: <CalendarDays size={17} /> },
+    { key: "history", label: copy.navHistory, count: historyBookings.length, icon: <History size={17} /> },
+    { key: "availability", label: copy.navAvailability, count: availability.length, icon: <CalendarCheck size={17} /> },
+    { key: "leave", label: copy.navLeave, count: pendingLeaves, icon: <Plane size={17} /> },
+    { key: "notifications", label: copy.navNotifications, count: unread, icon: <Bell size={17} /> },
   ];
 
   if (authLoading || loading) {
-    return <div className="flex min-h-screen items-center justify-center bg-pink-50 text-sm font-bold text-gray-500">Loading staff portal...</div>;
+    return <div className="flex min-h-screen items-center justify-center bg-pink-50 text-sm font-bold text-gray-500">{lang === "vi" ? "Đang tải cổng nhân viên..." : "Loading staff portal..."}</div>;
   }
 
   return (
@@ -501,14 +613,18 @@ export default function StaffPortalPage() {
           <div className="mb-5 overflow-hidden rounded-[2rem] border border-pink-100 bg-gradient-to-br from-pink-50 via-white to-amber-50 p-5 shadow-sm sm:p-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-pink-600">Staff Portal</p>
-                <h1 className="mt-2 text-2xl font-black leading-tight text-gray-950 sm:text-4xl">Work dashboard</h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">Accept jobs, see today's schedule, review booking history, set availability, and submit leave tickets from one simple dashboard.</p>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-pink-600">{copy.portal}</p>
+                <h1 className="mt-2 text-2xl font-black leading-tight text-gray-950 sm:text-4xl">{copy.dashboard}</h1>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">{copy.hero}</p>
                 {nextBooking && <p className="mt-3 inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-black text-gray-700 shadow-sm">Next job: {shortDate(nextBooking.date)} at {nextBooking.time} · {nextBooking.customerName}</p>}
               </div>
               <div className="flex flex-wrap gap-2">
-                <button onClick={refresh} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 hover:bg-gray-50"><RefreshCw size={16} />Refresh</button>
-                <button onClick={logout} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-4 text-sm font-black text-white hover:bg-gray-800"><LogOut size={16} />Logout</button>
+                <div className="inline-flex h-11 overflow-hidden rounded-2xl border border-pink-100 bg-white p-1 text-xs font-black shadow-sm" data-i18n="staff-language-toggle">
+                  <button onClick={() => switchLang("en")} className={`rounded-xl px-3 ${lang === "en" ? "bg-pink-600 text-white" : "text-gray-500"}`}>EN</button>
+                  <button onClick={() => switchLang("vi")} className={`rounded-xl px-3 ${lang === "vi" ? "bg-pink-600 text-white" : "text-gray-500"}`}>VI</button>
+                </div>
+                <button onClick={refresh} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 hover:bg-gray-50"><RefreshCw size={16} />{copy.refresh}</button>
+                <button onClick={logout} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gray-900 px-4 text-sm font-black text-white hover:bg-gray-800"><LogOut size={16} />{copy.logout}</button>
               </div>
             </div>
           </div>
@@ -518,23 +634,23 @@ export default function StaffPortalPage() {
 
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-              <StatCard icon={<ClipboardList size={20} />} label="Open" value={dashboardStats.available || availableBookings.length} tone="pink" />
-              <StatCard icon={<CalendarDays size={20} />} label="Assigned" value={dashboardStats.assigned || myBookings.length} tone="emerald" />
-              <StatCard icon={<Clock size={20} />} label="Today" value={todayBookings.length} tone="amber" />
-              <StatCard icon={<History size={20} />} label="History" value={dashboardStats.history || historyBookings.length} tone="sky" />
-              <StatCard icon={<Bell size={20} />} label="Unread" value={unread} tone="slate" />
+              <StatCard icon={<ClipboardList size={20} />} label={copy.open} value={dashboardStats.available || availableBookings.length} tone="pink" />
+              <StatCard icon={<CalendarDays size={20} />} label={copy.assigned} value={dashboardStats.assigned || myBookings.length} tone="emerald" />
+              <StatCard icon={<Clock size={20} />} label={copy.today} value={todayBookings.length} tone="amber" />
+              <StatCard icon={<History size={20} />} label={copy.history} value={dashboardStats.history || historyBookings.length} tone="sky" />
+              <StatCard icon={<Bell size={20} />} label={copy.unread} value={unread} tone="slate" />
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <StatCard icon={<PoundSterling size={20} />} label="Revenue today" value={formatPrice(dashboardStats.revenueToday || 0)} tone="emerald" />
-              <StatCard icon={<PoundSterling size={20} />} label="Revenue this week" value={formatPrice(dashboardStats.revenueWeek || 0)} tone="amber" />
-              <StatCard icon={<PoundSterling size={20} />} label="Revenue total" value={formatPrice(dashboardStats.revenueTotal || 0)} tone="pink" />
+              <StatCard icon={<PoundSterling size={20} />} label={copy.revenueToday} value={formatPrice(dashboardStats.revenueToday || 0)} tone="emerald" />
+              <StatCard icon={<PoundSterling size={20} />} label={copy.revenueWeek} value={formatPrice(dashboardStats.revenueWeek || 0)} tone="amber" />
+              <StatCard icon={<PoundSterling size={20} />} label={copy.revenueTotal} value={formatPrice(dashboardStats.revenueTotal || 0)} tone="pink" />
             </div>
           </div>
 
           <div className="grid gap-5 xl:grid-cols-[270px_minmax(0,1fr)]">
             <aside className="rounded-[2rem] border border-gray-100 bg-white p-3 shadow-sm xl:sticky xl:top-24 xl:self-start">
               <div className="mb-3 rounded-3xl bg-gray-50 p-4">
-                <p className="text-xs font-black uppercase tracking-wide text-gray-400">Signed in as</p>
+                <p className="text-xs font-black uppercase tracking-wide text-gray-400">{copy.signedInAs}</p>
                 <p className="mt-1 truncate text-sm font-black text-gray-950">{user?.name || user?.email || "Staff"}</p>
                 <p className="text-xs font-bold text-pink-600">{user?.role}</p>
               </div>
@@ -568,57 +684,73 @@ export default function StaffPortalPage() {
               )}
 
               {view === "availability" && (
-                <div className="grid gap-5 2xl:grid-cols-[1fr_420px]">
-                  <Section title="Weekly working hours" subtitle="Save your main shift for each day. When you save, this replaces the saved rota for the selected week in real time.">
-                    <div className="space-y-4">
-                      <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Week starts</span><input type="date" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} /></label>
-                      <div className="rounded-3xl border border-pink-100 bg-pink-50/60 p-3 text-xs font-bold leading-5 text-gray-600">Unticked day = off / busy. Ticked day = working. Save the week once and the calendar updates straight away. Need two shifts in one day? Save the main block here, then add the second block in the panel on the right.</div>
-                      <div className="space-y-3">
-                        {weekDays.map((day) => {
-                          const slot = weekDraft[day] || { enabled: false, startTime: "09:00", endTime: "18:00" };
-                          return (
-                            <div key={day} className={`rounded-3xl border p-3 sm:p-4 ${slot.enabled ? "border-pink-200 bg-pink-50" : "border-gray-100 bg-white"}`}>
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
-                                  <p className="text-sm font-black text-gray-950">{new Date(day + "T00:00:00").toLocaleDateString(undefined, { weekday: "long" })}</p>
-                                  <p className="text-xs font-bold text-gray-500">{day}</p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => setWeekDraft((current) => ({ ...current, [day]: { ...(current[day] || slot), enabled: !(current[day]?.enabled ?? slot.enabled) } }))}
-                                  className={`relative h-8 w-14 shrink-0 rounded-full transition ${slot.enabled ? "bg-pink-600" : "bg-gray-300"}`}
-                                >
-                                  <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition ${slot.enabled ? "left-7" : "left-1"}`} />
-                                </button>
-                              </div>
-                              <div className="mt-3 grid grid-cols-2 gap-3">
-                                <label className="block"><span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-gray-400">Start</span><input type="time" disabled={!slot.enabled} className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400" value={slot.startTime} onChange={(e) => setWeekDraft((current) => ({ ...current, [day]: { ...(current[day] || slot), startTime: e.target.value } }))} /></label>
-                                <label className="block"><span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-gray-400">End</span><input type="time" disabled={!slot.enabled} className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400" value={slot.endTime} onChange={(e) => setWeekDraft((current) => ({ ...current, [day]: { ...(current[day] || slot), endTime: e.target.value } }))} /></label>
-                              </div>
+                <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_360px]" data-staff-availability-ux="compact-bilingual-v20260709">
+                  <Section title={copy.rotaTitle} subtitle={copy.rotaSubtitle}>
+                    <div className="mb-4 grid gap-3 md:grid-cols-[220px_1fr]">
+                      <label className="block rounded-3xl border border-pink-100 bg-white p-3 shadow-sm">
+                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-gray-400">{copy.weekStarts}</span>
+                        <input type="date" className="h-11 w-full rounded-2xl border border-pink-200 px-3 text-sm font-black outline-none focus:ring-4 focus:ring-pink-50" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} />
+                      </label>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <div className="rounded-3xl border border-pink-100 bg-pink-50 p-3"><p className="text-2xl font-black text-pink-700">{workingDayCount}</p><p className="text-[11px] font-black uppercase tracking-wide text-pink-500">{copy.workingDays}</p></div>
+                        <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-3"><p className="text-2xl font-black text-emerald-700">{availability.length}</p><p className="text-[11px] font-black uppercase tracking-wide text-emerald-500">{copy.activeSlots}</p></div>
+                        <button type="button" onClick={applyWeekdaysPreset} className="rounded-3xl border border-gray-100 bg-gray-950 px-3 py-3 text-left text-xs font-black text-white shadow-sm hover:bg-gray-800">{copy.weekdays}</button>
+                        <button type="button" onClick={clearWeek} className="rounded-3xl border border-gray-200 bg-white px-3 py-3 text-left text-xs font-black text-gray-700 hover:bg-gray-50">{copy.clearWeek}</button>
+                      </div>
+                    </div>
+
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-gray-400">{copy.quickSetup}</p>
+                      <button type="button" onClick={copyFirstWorkingDay} className="rounded-full border border-pink-100 bg-pink-50 px-3 py-1.5 text-xs font-black text-pink-700 hover:bg-pink-100">{copy.copyFirst}</button>
+                    </div>
+
+                    <div className="overflow-hidden rounded-[1.75rem] border border-gray-100 bg-white shadow-sm">
+                      {weekDays.map((day) => {
+                        const slot = weekDraft[day] || { enabled: false, startTime: "09:00", endTime: "18:00" };
+                        const date = new Date(day + "T00:00:00");
+                        const weekday = date.toLocaleDateString(lang === "vi" ? "vi-VN" : undefined, { weekday: "short" });
+                        const monthDay = date.toLocaleDateString(lang === "vi" ? "vi-VN" : undefined, { day: "2-digit", month: "short" });
+                        return (
+                          <div key={day} className={`grid gap-3 border-b border-gray-100 p-3 last:border-b-0 sm:grid-cols-[150px_minmax(0,1fr)_92px] sm:items-center ${slot.enabled ? "bg-pink-50/55" : "bg-white"}`}>
+                            <button
+                              type="button"
+                              onClick={() => setWeekDraft((current) => ({ ...current, [day]: { ...(current[day] || slot), enabled: !(current[day]?.enabled ?? slot.enabled) } }))}
+                              className="flex items-center gap-3 text-left"
+                            >
+                              <span className={`relative h-7 w-12 shrink-0 rounded-full transition ${slot.enabled ? "bg-pink-600" : "bg-gray-300"}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${slot.enabled ? "left-6" : "left-1"}`} /></span>
+                              <span><span className="block text-sm font-black text-gray-950">{weekday}</span><span className="block text-xs font-bold text-gray-500">{monthDay}</span></span>
+                            </button>
+                            <div className="grid grid-cols-2 gap-2">
+                              <label className="sr-only">{copy.start}</label>
+                              <input aria-label={`${copy.start} ${weekday}`} type="time" disabled={!slot.enabled} className="h-11 rounded-2xl border border-pink-200 bg-white px-3 text-sm font-black outline-none focus:ring-4 focus:ring-pink-50 disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400" value={slot.startTime} onChange={(e) => setWeekDraft((current) => ({ ...current, [day]: { ...(current[day] || slot), startTime: e.target.value } }))} />
+                              <label className="sr-only">{copy.end}</label>
+                              <input aria-label={`${copy.end} ${weekday}`} type="time" disabled={!slot.enabled} className="h-11 rounded-2xl border border-pink-200 bg-white px-3 text-sm font-black outline-none focus:ring-4 focus:ring-pink-50 disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400" value={slot.endTime} onChange={(e) => setWeekDraft((current) => ({ ...current, [day]: { ...(current[day] || slot), endTime: e.target.value } }))} />
                             </div>
-                          );
-                        })}
-                      </div>
+                            <span className={`inline-flex h-9 items-center justify-center rounded-2xl text-xs font-black ${slot.enabled ? "bg-pink-600 text-white" : "bg-gray-100 text-gray-500"}`}>{slot.enabled ? copy.working : copy.off}</span>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <button onClick={saveWeeklyAvailability} disabled={saving} className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-pink-600 px-4 text-sm font-black text-white hover:bg-pink-700 disabled:opacity-50"><Plus size={16} />{saving ? "Saving week..." : "Save weekly availability"}</button>
+                    <button onClick={saveWeeklyAvailability} disabled={saving} className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-pink-600 px-4 text-sm font-black text-white hover:bg-pink-700 disabled:opacity-50"><Plus size={16} />{saving ? copy.savingWeek : copy.saveWeek}</button>
                   </Section>
 
-                  <Section title="Second shift / extra hours" subtitle="Use this when you need a second block on the same day (for example 09:00-12:00 and 13:00-18:00), or one special date outside your main weekly rota.">
-                    <div className="space-y-3">
-                      <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Repeat every</span><select className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.dayOfWeek} onChange={(e) => setForm({ ...form, dayOfWeek: e.target.value, date: "" })}>{days.map((d, i) => <option key={d} value={i}>{d}</option>)}</select></label>
-                      <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Or specific date</span><input type="date" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></label>
-                      <div className="rounded-3xl border border-sky-100 bg-sky-50/70 p-3 text-xs font-bold leading-5 text-gray-600">Example: if Monday main shift is 09:00-12:00, add another slot here for the same Monday from 13:00-18:00. That creates a clean split shift instead of one long block.</div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">Start</span><input type="time" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} /></label>
-                        <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">End</span><input type="time" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></label>
+                  <div className="space-y-5">
+                    <Section title={copy.extraTitle} subtitle={copy.extraSubtitle}>
+                      <div className="space-y-3">
+                        <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">{copy.repeatEvery}</span><select className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.dayOfWeek} onChange={(e) => setForm({ ...form, dayOfWeek: e.target.value, date: "" })}>{days.map((d, i) => <option key={d} value={i}>{lang === "vi" ? new Date(`2026-07-${12 + i}T00:00:00`).toLocaleDateString("vi-VN", { weekday: "long" }) : d}</option>)}</select></label>
+                        <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">{copy.specificDate}</span><input type="date" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">{copy.start}</span><input type="time" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} /></label>
+                          <label className="block"><span className="mb-1 block text-xs font-black uppercase tracking-wide text-gray-400">{copy.end}</span><input type="time" className="h-12 w-full rounded-2xl border border-pink-200 px-4 text-sm font-bold outline-none focus:ring-4 focus:ring-pink-50" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></label>
+                        </div>
+                        <button onClick={saveAvailability} disabled={saving} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gray-900 px-4 text-sm font-black text-white hover:bg-gray-800 disabled:opacity-50"><Plus size={16} />{copy.addSlot}</button>
                       </div>
-                      <button onClick={saveAvailability} disabled={saving} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gray-900 px-4 text-sm font-black text-white hover:bg-gray-800 disabled:opacity-50"><Plus size={16} />Add free slot</button>
-                    </div>
-                  </Section>
+                    </Section>
 
-                  <Section title="Saved availability" subtitle="Remove slots you no longer want to offer.">
-                    {availability.length === 0 ? <EmptyState title="No working hours saved yet" text="Tick the days you can work first so the owner calendar only shows real staff availability." /> : <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{availability.map((item) => <div key={item.id} className="flex items-center justify-between gap-2 rounded-2xl bg-gray-50 p-3 text-sm"><span className="truncate font-bold text-gray-700">{item.date ? shortDate(item.date) : days[item.dayOfWeek ?? 0]} · {item.startTime}-{item.endTime}</span><button onClick={() => deleteAvailability(item.id)} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-500"><Trash size={15} /></button></div>)}</div>}
-                  </Section>
+                    <Section title={copy.savedTitle} subtitle={copy.savedSubtitle}>
+                      {availability.length === 0 ? <EmptyState title={copy.noHoursTitle} text={copy.noHoursText} /> : <div className="grid gap-2">{availability.map((item) => <div key={item.id} className="flex items-center justify-between gap-2 rounded-2xl bg-gray-50 p-3 text-sm"><span className="truncate font-bold text-gray-700">{item.date ? shortDate(item.date) : (lang === "vi" ? new Date(`2026-07-${12 + (item.dayOfWeek ?? 0)}T00:00:00`).toLocaleDateString("vi-VN", { weekday: "long" }) : days[item.dayOfWeek ?? 0])} · {item.startTime}-{item.endTime}</span><button onClick={() => deleteAvailability(item.id)} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-500"><Trash size={15} /></button></div>)}</div>}
+                    </Section>
+                  </div>
                 </div>
               )}
 
