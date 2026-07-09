@@ -46,6 +46,22 @@ const contactLinks = [
 const APP_EDITION = String(process.env.NEXT_PUBLIC_APP_EDITION || "pro").toLowerCase();
 const SHOP_LANGUAGE = String(process.env.NEXT_PUBLIC_SHOP_LANGUAGE || "en").toLowerCase();
 
+function chatbotEndpointCandidates() {
+  const base = API_BASE.replace(/\/$/, "");
+  return [`${base}/api/chatbot`, `${base}/api/api/chatbot`];
+}
+
+function responseLanguageFor(text: string) {
+  const normalized = text.toLowerCase();
+  if (
+    /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(text) ||
+    /\b(xin chào|chào|tiếng việt|tieng viet|đặt lịch|dat lich|dịch vụ|dich vu|bảng giá|bang gia|giá|gia|móng|mong|làm nail|lam nail|tư vấn|tu van)\b/i.test(normalized)
+  ) {
+    return "vi";
+  }
+  return SHOP_LANGUAGE.startsWith("vi") ? "vi" : "en";
+}
+
 function publicFlag(value: string | undefined, fallback: boolean) {
   const normalized = String(value || "").trim().toLowerCase();
   if (["1", "true", "yes", "on"].includes(normalized)) return true;
@@ -198,18 +214,27 @@ export default function ContactBubble() {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
 
-      const res = await fetch(`${API_BASE}/api/chatbot`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          messages: nextMessages.map(({ role, content: bodyContent }) => ({ role, content: bodyContent })),
-          page: pathname || "/",
-          imageDataUrl: imageUrl,
-          responseLanguage: SHOP_LANGUAGE,
-        }),
+      const payload = JSON.stringify({
+        messages: nextMessages.map(({ role, content: bodyContent }) => ({ role, content: bodyContent })),
+        page: pathname || "/",
+        imageDataUrl: imageUrl,
+        responseLanguage: responseLanguageFor(content),
       });
-      const data = await res.json().catch(() => ({}));
-      const answer = String(data?.answer || data?.error || "Sorry, I could not answer that just now.").trim();
+
+      let data: any = null;
+      let lastError = "";
+      for (const endpoint of chatbotEndpointCandidates()) {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers,
+          body: payload,
+        });
+        data = await res.json().catch(() => null);
+        if (res.ok && data?.answer) break;
+        lastError = String(data?.error || `HTTP ${res.status}`);
+      }
+
+      const answer = String(data?.answer || lastError || "Sorry, I could not answer that just now.").trim();
       setMessages((current) => [...current, { role: "assistant", content: answer }]);
     } catch {
       setMessages((current) => [
