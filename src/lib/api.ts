@@ -1,4 +1,22 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://bookingnail.overpowers.agency";
+const CONFIGURED_API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const DEFAULT_API_BASE = "https://bookingnail.overpowers.agency";
+
+function resolveApiBase() {
+  if (typeof window !== "undefined") {
+    const currentOrigin = window.location.origin;
+    if (!CONFIGURED_API_BASE) return currentOrigin;
+    try {
+      const configured = new URL(CONFIGURED_API_BASE);
+      if (configured.host === window.location.host) return currentOrigin;
+      return configured.origin;
+    } catch {
+      return currentOrigin;
+    }
+  }
+  return CONFIGURED_API_BASE || DEFAULT_API_BASE;
+}
+
+export const API_BASE = resolveApiBase();
 
 export async function fetchAPI(path: string, options: RequestInit = {}) {
   const url = `${API_BASE}${path}`;
