@@ -130,7 +130,15 @@ async function calendarChecks(base, label, token) {
   const settings = await request(`${base}/api/admin/calendar-sync`, { headers });
   const redirectUri = settings.json?.env?.google?.redirectUri || '';
   const settingsOk = settings.ok && settings.json?.settings && settings.json?.env?.google?.configured === true && redirectUri.includes('/api/auth/callback/google');
-  add(`${label} calendar-sync admin API`, settingsOk, `HTTP ${settings.status}; googleConfigured=${settings.json?.env?.google?.configured}; redirectUri=${redirectUri}`);
+  const connections = Array.isArray(settings.json?.connections) ? settings.json.connections : [];
+  const activeConnections = connections.filter((item) => item?.syncEnabled !== false);
+  const watchedConnections = activeConnections.filter((item) => item?.watchChannelId || item?.watchExpiration || item?.lastSyncAt);
+  add(`${label} calendar-sync admin API`, settingsOk, `HTTP ${settings.status}; googleConfigured=${settings.json?.env?.google?.configured}; redirectUri=${redirectUri}; connections=${connections.length}`);
+  if (!connections.length) {
+    warn(`${label} Google Calendar 2-way activation`, 'no Gmail consent/refresh-token connection yet; connect Gmail once from /admin/google-sync before claiming real 2-way event create/update/reconcile is active');
+  } else {
+    add(`${label} Google Calendar connection present`, activeConnections.length > 0, `active=${activeConnections.length}; watchedOrSynced=${watchedConnections.length}`);
+  }
 
   await expectPage(base, '/admin/calendar', `${label} admin calendar page`);
   await expectPage(base, '/admin/google-sync', `${label} google-sync page`);
