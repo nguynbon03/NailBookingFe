@@ -4,11 +4,11 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Plus, Pencil, Trash, CheckCircle, XCircle, ImagePlus, X, Mail, Phone } from "lucide-react";
+import { Plus, Pencil, Trash, CheckCircle, XCircle, ImagePlus, X, Mail, Phone, Star } from "lucide-react";
 
 const emptyForm = { name: "", email: "", phone: "", role: "THERAPIST", bio: "", avatar: "", active: true, loginPassword: "" };
 
-type Staff = { id: string; name: string; email: string; phone?: string | null; role: string; bio?: string | null; avatar?: string | null; active: boolean; createdAt: string };
+type Staff = { id: string; name: string; email: string; phone?: string | null; role: string; bio?: string | null; avatar?: string | null; active: boolean; createdAt: string; ratingAverage?: number | null; ratingCount?: number; latestReview?: { rating: number; comment?: string | null; createdAt?: string } | null };
 
 function readImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -176,6 +176,13 @@ export default function AdminStaff() {
                   </div>
                   <div className="mt-3">
                     {s.active ? <span className="flex items-center gap-1 text-green-600 text-xs font-bold"><CheckCircle size={14} /> Active</span> : <span className="flex items-center gap-1 text-gray-400 text-xs font-bold"><XCircle size={14} /> Inactive</span>}
+                  </div>
+                  <div className="mt-3 rounded-2xl border border-amber-100 bg-amber-50/70 p-3" data-admin-staff-rating="staff-rating-v20260709">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1 text-sm font-black text-amber-700"><Star size={15} fill="currentColor" /> {s.ratingCount ? `${Number(s.ratingAverage || 0).toFixed(2)}/5` : "No ratings yet"}</span>
+                      <span className="text-[11px] font-bold text-amber-600">{s.ratingCount || 0} review{(s.ratingCount || 0) === 1 ? "" : "s"}</span>
+                    </div>
+                    {s.latestReview?.comment && <p className="mt-2 line-clamp-2 text-xs leading-5 text-gray-600">“{s.latestReview.comment}”</p>}
                   </div>
                 </div>
               </div>

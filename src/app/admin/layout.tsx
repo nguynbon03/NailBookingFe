@@ -8,6 +8,7 @@ import { TrendingUp, CalendarDays, Package, Users, Tags, UserCog, CalendarOff, S
 import Link from "next/link";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { AdminI18nBridge, AdminLanguageToggle, ADMIN_LANG_STORAGE_KEY, translateAdminText, type AdminLang } from "./AdminLanguageTools";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -38,6 +39,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, loading } = useAuth();
   const pathname = usePathname();
   const [ticketUnread, setTicketUnread] = useState(0);
+  const [lang, setLang] = useState<AdminLang>("en");
+
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? window.localStorage.getItem(ADMIN_LANG_STORAGE_KEY) : null;
+    if (saved === "en" || saved === "vi") setLang(saved);
+  }, []);
+
+  const switchLang = (next: AdminLang) => {
+    setLang(next);
+    if (typeof window !== "undefined") window.localStorage.setItem(ADMIN_LANG_STORAGE_KEY, next);
+  };
 
   useEffect(() => {
     if (loading || typeof window === "undefined") return;
@@ -63,7 +75,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [loading, user?.id, user?.role]);
 
   if (loading) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">Loading admin...</div>;
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">{translateAdminText("Loading admin...", lang)}</div>;
   }
 
   if (!user || !adminRoles.has(user.role)) {
@@ -71,7 +83,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const consoleLabel = user.role === "MANAGER" ? "Manager" : "Admin";
-  const productLabel = `Nail Lounge ${consoleLabel}`;
+  const displayConsoleLabel = lang === "vi" ? (user.role === "MANAGER" ? "Quản lý" : "Quản trị") : consoleLabel;
+  const productLabel = `Nail Lounge ${displayConsoleLabel}`;
 
   const nav = (mobile = false) => (
     <nav className={mobile ? "flex gap-2 overflow-x-auto px-3 pb-3" : "space-y-1"}>
@@ -93,7 +106,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
           >
             <link.icon size={mobile ? 15 : 17} />
-            <span>{link.label}</span>
+            <span>{translateAdminText(link.label, lang)}</span>
             {link.href === "/admin/inbox" && ticketUnread > 0 && (
               <span className={cn(
                 "ml-auto min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-black",
@@ -109,14 +122,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-200 hover:bg-gray-800 border-t border-gray-700 mt-2 pt-3 text-sm"
         >
           <Home size={17} />
-          Back to Site
+          {translateAdminText("Back to Site", lang)}
         </a>
       )}
     </nav>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 lg:flex">
+    <div className="min-h-screen bg-gray-50 lg:flex" data-admin-shell>
+      <AdminI18nBridge lang={lang} />
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 bg-gray-900 text-white p-5 flex-shrink-0 h-screen sticky top-0 flex-col overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
@@ -125,6 +139,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <p className="text-[10px] text-gray-500">ADMIN • {DEPLOY_VERSION}</p>
           </div>
         </div>
+        <div className="mb-4">
+          <AdminLanguageToggle lang={lang} onChange={switchLang} />
+        </div>
         {nav(false)}
       </aside>
 
@@ -132,12 +149,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <header className="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur border-b">
         <div className="flex items-center justify-between px-3 py-3">
           <div>
-            <p className="text-xs text-pink-600 font-black uppercase tracking-wide">{consoleLabel} {DEPLOY_VERSION}</p>
+            <p className="text-xs text-pink-600 font-black uppercase tracking-wide">{displayConsoleLabel} {DEPLOY_VERSION}</p>
             <h1 className="text-base font-black text-gray-900">Nail Lounge</h1>
           </div>
-          <a href="/" className="px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-bold flex items-center gap-1.5">
-            <Home size={14} /> Back to Site
-          </a>
+          <div className="flex items-center gap-2">
+            <AdminLanguageToggle lang={lang} onChange={switchLang} />
+            <a href="/" className="px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-bold flex items-center gap-1.5">
+              <Home size={14} /> {translateAdminText("Back to Site", lang)}
+            </a>
+          </div>
         </div>
         <div className="border-t px-3 pb-2 overflow-x-auto">{nav(true)}</div>
       </header>
