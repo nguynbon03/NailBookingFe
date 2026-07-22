@@ -35,7 +35,11 @@ function money(value: number) {
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
-
+function tomorrowIso() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
 function daysAgoIso(days: number) {
   const d = new Date();
   d.setDate(d.getDate() - days);
@@ -49,7 +53,7 @@ export default function AdminDashboard() {
   const [error, setError] = useState("");
   const [granularity, setGranularity] = useState<"daily" | "monthly" | "yearly">("daily");
   const [fromDate, setFromDate] = useState(() => daysAgoIso(13));
-  const [toDate, setToDate] = useState(() => todayIso());
+  const [toDate, setToDate] = useState(() => tomorrowIso());
 
   const load = () => {
     setLoading(true);
@@ -114,9 +118,9 @@ export default function AdminDashboard() {
             <div className="flex flex-wrap gap-2">
               <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700" />
               <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-700" />
-              <button onClick={() => { setFromDate(todayIso()); setToDate(todayIso()); }} className="h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700">Today</button>
-              <button onClick={() => { setFromDate(daysAgoIso(6)); setToDate(todayIso()); }} className="h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700">Last 7 days</button>
-              <button onClick={() => { setFromDate(daysAgoIso(29)); setToDate(todayIso()); }} className="h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700">Last 30 days</button>
+              <button onClick={() => { setFromDate(todayIso()); setToDate(tomorrowIso()); }} className="h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700">Today</button>
+              <button onClick={() => { setFromDate(daysAgoIso(6)); setToDate(tomorrowIso()); }} className="h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700">Last 7 days</button>
+              <button onClick={() => { setFromDate(daysAgoIso(29)); setToDate(tomorrowIso()); }} className="h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700">Last 30 days</button>
             </div>
           </div>
         </div>
