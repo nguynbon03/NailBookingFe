@@ -8,6 +8,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { api } from "@/lib/api";
 import { categoryLabels, fallbackServices, formatDuration, formatPrice, groupServices, normalizeServices, orderedCategories, type PublicService } from "@/lib/service-utils";
+import { useLanguage } from "@/context/LanguageContext";
+import { t } from "@/lib/translations";
 
 const icons: Record<string, React.ElementType> = {
   extensions_hands: Hand,
@@ -28,6 +30,7 @@ const colors: Record<string, string> = {
 };
 
 export default function ServicesPage() {
+  const { lang } = useLanguage();
   const [search, setSearch] = useState("");
   const [openCategory, setOpenCategory] = useState<string | null>("extensions_hands");
   const [services, setServices] = useState<PublicService[]>(fallbackServices());
@@ -53,14 +56,14 @@ export default function ServicesPage() {
       <main className="pt-16 min-h-screen bg-gradient-to-b from-pink-50/30 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
-            <h1 className="text-4xl font-bold text-gradient mb-3">Our Services</h1>
-            <p className="text-gray-500">Browse live services, prices and photos managed by the shop.</p>
+            <h1 className="text-4xl font-bold text-gradient mb-3">{t("servicesPage.title", lang)}</h1>
+            <p className="text-gray-500">{t("servicesPage.subtitle", lang)}</p>
           </motion.div>
 
           <div className="relative max-w-md mx-auto mb-8">
             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
-              placeholder="Search services..."
+              placeholder={t("servicesPage.search", lang)}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-11 pr-4 py-3.5 rounded-full border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none bg-white"
@@ -91,7 +94,7 @@ export default function ServicesPage() {
                       </div>
                       <div>
                         <h3 className="font-bold text-lg text-gray-900">{categoryLabels[catKey] || catKey}</h3>
-                        <p className="text-sm text-gray-400">{catServices.length} services</p>
+                        <p className="text-sm text-gray-400">{catServices.length} {t("servicesPage.services", lang)}</p>
                       </div>
                     </div>
                     {!search && (
@@ -137,7 +140,7 @@ export default function ServicesPage() {
                                   onClick={() => handleBook(service)}
                                   className="btn-primary text-xs sm:text-sm py-2 px-4 flex items-center gap-1 group/btn"
                                 >
-                                  Book
+                                  {t("servicesPage.book", lang)}
                                   <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
                                 </Link>
                               </div>
@@ -153,13 +156,13 @@ export default function ServicesPage() {
 
             {filtered.length === 0 && (
               <div className="text-center py-20">
-                <p className="text-gray-400">No services found matching your search.</p>
+                <p className="text-gray-400">{t("servicesPage.noResults", lang)}</p>
               </div>
             )}
           </div>
 
           <div className="text-center mt-10">
-            <Link href="/" className="text-sm text-gray-400 hover:text-pink-500 transition-colors">← Back to Home</Link>
+            <Link href="/" className="text-sm text-gray-400 hover:text-pink-500 transition-colors">{t("servicesPage.backToHome", lang)}</Link>
           </div>
         </div>
       </main>

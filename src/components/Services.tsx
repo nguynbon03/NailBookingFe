@@ -6,6 +6,8 @@ import { Hand, Footprints, Sparkles, Scissors, Star, Droplets, ChevronDown, Cloc
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { categoryLabels, categoryOrder, fallbackServices, formatDuration, formatPrice, groupServices, normalizeServices, orderedCategories, type PublicService } from "@/lib/service-utils";
+import { useLanguage } from "@/context/LanguageContext";
+import { t } from "@/lib/translations";
 
 const icons: Record<string, React.ElementType> = {
   extensions_hands: Hand,
@@ -22,6 +24,7 @@ const gradients = [
 ];
 
 export default function Services() {
+  const { lang } = useLanguage();
   const [openIndex, setOpenIndex] = useState(0);
   const [services, setServices] = useState<PublicService[]>(fallbackServices());
 
@@ -43,9 +46,9 @@ export default function Services() {
     <section id="services" className="section-padding bg-gradient-to-b from-white to-pink-50/30">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
-          <p className="text-pink-500 font-semibold mb-3">Our Services</p>
-          <h2 className="text-4xl lg:text-5xl font-bold text-gradient">Premium Nail Care</h2>
-          <p className="text-gray-500 mt-4 max-w-lg mx-auto">All service data is synced live from the salon admin dashboard.</p>
+          <p className="text-pink-500 font-semibold mb-3">{t("services.badge", lang)}</p>
+          <h2 className="text-4xl lg:text-5xl font-bold text-gradient">{t("services.title", lang)}</h2>
+          <p className="text-gray-500 mt-4 max-w-lg mx-auto">{t("services.subtitle", lang)}</p>
         </motion.div>
         <div className="space-y-3">
           {cats.map((catKey, i) => {
@@ -58,10 +61,10 @@ export default function Services() {
                 <button onClick={() => toggle(i)} className="w-full flex items-center justify-between p-5 text-left">
                   <div className="flex items-center gap-4">
                     <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradients[i % gradients.length]} flex items-center justify-center text-white shadow-sm`}><Icon size={20} /></div>
-                    <div><p className="font-bold text-gray-900 text-lg">{categoryLabels[catKey] || catKey}</p><p className="text-sm text-gray-400">{catServices.length} service{catServices.length !== 1 ? "s" : ""}</p></div>
+                    <div><p className="font-bold text-gray-900 text-lg">{categoryLabels[catKey] || catKey}</p><p className="text-sm text-gray-400">{catServices.length} {t("services.serviceCount", lang)}{catServices.length !== 1 ? "s" : ""}</p></div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-400 font-medium">From {formatPrice(minPrice || 0)}</span>
+                    <span className="text-sm text-gray-400 font-medium">{t("services.from", lang)} {formatPrice(minPrice || 0)}</span>
                     <div className={`w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center text-pink-500 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}><ChevronDown size={18} /></div>
                   </div>
                 </button>
@@ -76,7 +79,7 @@ export default function Services() {
                             </div>
                             <div className="flex-1 min-w-0"><p className="font-semibold text-gray-900 text-sm truncate">{service.name}</p><div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5"><Clock size={12} /><span>{formatDuration(service.duration)}</span></div></div>
                             <p className="font-bold text-pink-600 text-sm shrink-0">{formatPrice(service.price)}</p>
-                            <Link href="/booking" onClick={() => handleBook(service)} className="shrink-0 inline-flex items-center gap-1 px-4 py-2 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-pink-200/50 transition-all hover:-translate-y-0.5">Book <ArrowRight size={14} /></Link>
+                            <Link href="/booking" onClick={() => handleBook(service)} className="shrink-0 inline-flex items-center gap-1 px-4 py-2 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold hover:shadow-lg hover:shadow-pink-200/50 transition-all hover:-translate-y-0.5">{t("services.book", lang)} <ArrowRight size={14} /></Link>
                           </div>
                         ))}
                       </div>
