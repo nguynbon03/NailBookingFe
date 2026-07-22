@@ -6,7 +6,9 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { AlertCircle, CalendarDays, Clock, MessageCircle, Phone, Scissors, XCircle } from "lucide-react";
+import { AlertCircle, CalendarDays, Clock, MessageCircle, Phone, Scissors, XCircle, CalendarPlus } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
+import { t } from "@/lib/translations";
 
 function money(value: number) {
   return `£${Number(value || 0).toFixed(2)}`;
@@ -50,6 +52,7 @@ type CustomerNotification = { id: string; title: string; message: string; read: 
 
 export default function MyBookingsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { lang } = useLanguage();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [websiteNotifications, setWebsiteNotifications] = useState<CustomerNotification[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -116,15 +119,12 @@ export default function MyBookingsPage() {
   return (
     <>
       <Navbar />
-      <main className="pt-24 min-h-screen bg-gradient-to-b from-pink-50/40 to-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
-          <div className="flex items-center justify-between gap-4 mb-8">
-            <div>
-              <p className="text-pink-500 font-semibold mb-2">Customer Area</p>
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">My Bookings</h1>
-              <p className="text-gray-500 mt-2">Track your appointments and show this page to the shop when you arrive.</p>
-            </div>
-            <Link href="/booking" className="btn-primary shrink-0">Book Again</Link>
+      <main className="pt-20 min-h-screen bg-gradient-to-b from-pink-50/40 to-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+          <div className="mb-8 sm:mb-10">
+            <p className="text-pink-500 font-semibold text-sm mb-1">{t("myBookings.customerArea", lang)}</p>
+            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">{t("myBookings.title", lang)}</h1>
+            <p className="text-gray-500 mt-2 text-sm sm:text-base">{t("myBookings.subtitle", lang)}</p>
           </div>
 
           {message && <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">{message}</div>}
@@ -172,22 +172,22 @@ export default function MyBookingsPage() {
                 const perPersonTotal = (booking.services || []).reduce((sum, item) => sum + Number(item.service?.price || 0), 0);
                 const subtotal = Math.round(perPersonTotal * people * 100) / 100;
                 return (
-                  <div key={booking.id} className="bg-white rounded-3xl border border-pink-100 p-5 sm:p-6 shadow-sm">
-                    <div className="flex flex-col sm:flex-row gap-5">
-                      <div className="w-full sm:w-28 h-28 rounded-2xl overflow-hidden bg-gradient-to-br from-pink-100 to-rose-100 shrink-0 flex items-center justify-center text-pink-400">
+                  <div key={booking.id} className="bg-white rounded-3xl border border-pink-100 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+                      <div className="w-full sm:w-24 h-24 rounded-2xl overflow-hidden bg-gradient-to-br from-pink-100 to-rose-100 shrink-0 flex items-center justify-center text-pink-400">
                         {firstService?.image ? (
                           <img src={firstService.image} alt={firstService.name} className="w-full h-full object-cover" />
                         ) : (
-                          <Scissors size={32} />
+                          <Scissors size={28} />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                          <div>
-                            <h2 className="font-bold text-lg text-gray-900">{booking.services?.map((s) => s.service.name).join(", ") || "Appointment"}</h2>
-                            <p className="text-sm text-gray-500">Staff: {staffDisplay(booking)}</p>
+                        <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                          <div className="min-w-0 flex-1">
+                            <h2 className="font-bold text-base sm:text-lg text-gray-900 truncate">{booking.services?.map((s) => s.service.name).join(", ") || "Appointment"}</h2>
+                            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Staff: {staffDisplay(booking)}</p>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${meta.tone}`}>{meta.label}</span>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase whitespace-nowrap ${meta.tone}`}>{meta.label}</span>
                         </div>
                         <div className="grid sm:grid-cols-3 gap-3 text-sm">
                           <div className="flex items-center gap-2 text-gray-600"><CalendarDays size={16} className="text-pink-500" />{new Date(booking.date).toLocaleDateString()}</div>
