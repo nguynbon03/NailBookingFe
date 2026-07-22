@@ -558,7 +558,7 @@ export default function BookingPage() {
                   <div className="bg-white rounded-2xl p-6 shadow-sm border border-pink-100 space-y-6">
                     <div>
                       <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><User size={16} /> Staff availability</label>
-                      <p className="text-xs text-gray-400 mb-3">Only staff with a free working slot will show available times.</p>
+                      <p className="text-xs text-gray-400 mb-3">Only available technicians will show time slots.</p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         <button onClick={() => setSelectedStaff("any")} className={cn(
                           "p-3 rounded-xl border text-sm font-medium transition-all",
@@ -609,21 +609,22 @@ export default function BookingPage() {
                               )}
                             >
                               {slot.time}
-                              <span className="block text-[10px] opacity-70">{slot.availableStaffCount} seat{slot.availableStaffCount === 1 ? "" : "s"} left</span>
+                              <span className="block text-[10px] opacity-70">{slot.availableStaffCount} staff available</span>
                             </button>
                           ))}
                         </div>
                       )}
                     </div>
 
-                    {/* Multi-person / Group booking — capacity follows selected time like cinema seats */}
+                    {/* Multi-person / Group booking — bring friends, each person gets their own nail technician */}
                     <div className="pt-4 border-t border-pink-100">
-                      <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <Users size={16} /> Number of people
+                      <label className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                        <Users size={16} /> How many people?
                       </label>
+                      <p className="text-xs text-gray-400 mb-3">Booking for yourself only, or bringing friends? Each person gets their own technician and the same services you selected.</p>
                       {!selectedTime ? (
                         <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
-                          Select a time first. The number of people will be limited by staff seats left at that time.
+                          Select a time first to see how many people can be served.
                         </div>
                       ) : (
                         <>
@@ -637,12 +638,12 @@ export default function BookingPage() {
                                   numPeople === n ? "bg-pink-600 text-white border-pink-600" : "border-pink-200 hover:bg-pink-50"
                                 )}
                               >
-                                {n}
+                                {n} {n === 1 ? "person" : "people"}
                               </button>
                             ))}
                           </div>
-                          <p className="text-xs text-gray-500 mt-1.5">
-                            {selectedSlotCapacity} staff-capacity seat{selectedSlotCapacity === 1 ? "" : "s"} left at {selectedTime}. You can only book up to the number of free seats.
+                          <p className="text-xs text-gray-500 mt-2">
+                            {selectedSlotCapacity} technician{selectedSlotCapacity === 1 ? " is" : "s are"} free at {selectedTime}. Max group size = available technicians.
                           </p>
                         </>
                       )}
