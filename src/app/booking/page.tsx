@@ -15,6 +15,8 @@ import { fallbackServices, formatDuration, formatPrice, normalizeServices, type 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { t } from "@/lib/translations";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -34,11 +36,12 @@ function bookingReference(id?: string) {
   return id ? `NL-${id.slice(-8).toUpperCase()}` : "NL-PENDING";
 }
 
-type Staff = { id: string; name: string; email: string; role: string; active: boolean; avatar?: string | null };
+type Staff = { id: string; name: string; email: string; role: string; active: boolean; avatar?: string | null; ratingAverage?: number | null; ratingCount?: number };
 type Slot = { time: string; availableStaffCount: number; staffIds: string[] };
 
 export default function BookingPage() {
   const { user, loading: authLoading } = useAuth();
+  const { lang } = useLanguage();
   const [step, setStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
@@ -290,11 +293,11 @@ export default function BookingPage() {
         <main className="pt-20 min-h-screen bg-gradient-to-b from-pink-50/30 to-white flex items-center justify-center px-4">
           <div className="max-w-lg w-full bg-white rounded-3xl border border-pink-100 shadow-xl shadow-pink-100/50 p-8 text-center">
             <ShieldCheck size={42} className="mx-auto text-pink-600 mb-4" />
-            <h1 className="text-2xl font-black text-gray-900 mb-2">Sign in required</h1>
-            <p className="text-sm text-gray-500 mb-6">Please sign in or register first. Booking email must match the verified account email so the shop can protect against spam bookings.</p>
+            <h1 className="text-2xl font-black text-gray-900 mb-2">{t("booking.signInRequired", lang)}</h1>
+            <p className="text-sm text-gray-500 mb-6">{t("booking.signInDesc", lang)}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Link href="/login?next=/booking" className="btn-primary">Sign In</Link>
-              <Link href="/register" className="btn-secondary">Register</Link>
+              <Link href="/login?next=/booking" className="btn-primary">{t("booking.signIn", lang)}</Link>
+              <Link href="/register" className="btn-secondary">{t("booking.register", lang)}</Link>
             </div>
           </div>
         </main>
@@ -427,15 +430,15 @@ export default function BookingPage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="text-center mb-10">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-pink-50 rounded-full text-pink-600 text-sm font-semibold mb-4">
-                <Sparkles size={16} /> Book Your Appointment
+                <Sparkles size={16} /> {t("booking.badge", lang)}
               </div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-gradient mb-2">Online Booking</h1>
-              <p className="text-gray-500">Select your service, date, and time. We&apos;ll confirm shortly.</p>
+              <h1 className="text-3xl sm:text-4xl font-bold text-gradient mb-2">{t("booking.title", lang)}</h1>
+              <p className="text-gray-500">{t("booking.subtitle", lang)}</p>
             </div>
 
             {/* Progress */}
             <div className="flex items-center justify-between mb-10 max-w-md mx-auto">
-              {["Service", "Date", "Time", "Details"].map((label, i) => (
+              {[t("booking.step.service", lang), t("booking.step.date", lang), t("booking.step.time", lang), t("booking.step.details", lang)].map((label, i) => (
                 <div key={label} className="flex flex-col items-center">
                   <div className={cn(
                     "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all",
@@ -454,8 +457,8 @@ export default function BookingPage() {
             <AnimatePresence mode="wait">
               {step === 1 && (
                 <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                  <h3 className="text-lg font-bold mb-2">Select Service(s)</h3>
-                  <p className="text-sm text-gray-500 mb-5">You can choose multiple services for one appointment. We will calculate the total time and price before you confirm.</p>
+                  <h3 className="text-lg font-bold mb-2">{t("booking.selectService", lang)}</h3>
+                  <p className="text-sm text-gray-500 mb-5">{t("booking.selectServiceDesc", lang)}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {primaryServiceOptions.map((s) => (
                       <button
@@ -489,7 +492,7 @@ export default function BookingPage() {
                   </div>
                   {allSelectedServiceObjects.length > 0 && (
                     <div className="mt-5 rounded-2xl border border-pink-100 bg-pink-50/60 p-4 text-sm text-gray-700">
-                      <p className="font-black text-gray-900 mb-2">Selected for this appointment</p>
+                      <p className="font-black text-gray-900 mb-2">{t("booking.selectedForAppointment", lang)}</p>
                       <div className="space-y-1">
                         {allSelectedServiceObjects.map((item) => (
                           <div key={item.id} className="flex justify-between gap-4">
@@ -499,7 +502,7 @@ export default function BookingPage() {
                         ))}
                       </div>
                       <div className="mt-3 border-t border-pink-100 pt-3 flex justify-between font-black">
-                        <span>Total per person</span>
+                        <span>{t("booking.totalPerPerson", lang)}</span>
                         <span>{formatPrice(perPersonPrice)} · {formatDuration(totalDuration || 30)}</span>
                       </div>
                     </div>
@@ -510,7 +513,7 @@ export default function BookingPage() {
               {/* Add-ons / Upsell (Extras category) */}
               {step === 1 && addonServiceOptions.length > 0 && (
                 <motion.div key="addons" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
-                  <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><Sparkles size={18} className="text-amber-500" /> Add-ons (optional)</h3>
+                  <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><Sparkles size={18} className="text-amber-500" /> {t("booking.addonsTitle", lang)}</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {addonServiceOptions.map((a) => (
                       <button
@@ -529,17 +532,17 @@ export default function BookingPage() {
                       </button>
                     ))}
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-1">Add-ons are optional and are included in the total appointment time and price.</p>
+                  <p className="text-[11px] text-gray-400 mt-1">{t("booking.addonsDesc", lang)}</p>
                 </motion.div>
               )}
 
               {step === 2 && (
                 <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                  <h3 className="text-xl sm:text-2xl font-black mb-5 text-gray-900">Select a Date</h3>
+                  <h3 className="text-xl sm:text-2xl font-black mb-5 text-gray-900">{t("booking.selectDate", lang)}</h3>
                   <div className="bg-white rounded-3xl p-5 sm:p-7 shadow-sm border border-pink-100">
                     <div className="flex items-center gap-3 mb-4 text-pink-600">
                       <CalendarDays size={26} className="shrink-0" />
-                      <span className="text-lg sm:text-xl font-black">Choose your preferred date</span>
+                      <span className="text-lg sm:text-xl font-black">{t("booking.chooseDate", lang)}</span>
                     </div>
                     <input
                       type="date"
@@ -554,7 +557,7 @@ export default function BookingPage() {
 
               {step === 3 && (
                 <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                  <h3 className="text-lg font-bold mb-5">Select Staff & Available Time</h3>
+                  <h3 className="text-lg font-bold mb-5">{t("booking.selectStaffTime", lang)}</h3>
                   <div className="bg-white rounded-2xl p-6 shadow-sm border border-pink-100 space-y-6">
                     <div>
                       <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><User size={16} /> Staff availability</label>
@@ -576,6 +579,9 @@ export default function BookingPage() {
                             </span>
                             <span className="min-w-0">
                               <span className="block truncate">{st.name}</span>
+                              <span className="mt-0.5 flex items-center gap-1 text-[10px] text-amber-600">
+                                <Star size={11} fill="currentColor" /> {st.ratingCount ? `${Number(st.ratingAverage || 0).toFixed(1)}/5 · ${st.ratingCount}` : "New"}
+                              </span>
                               <span className={cn("mt-1 w-2 h-2 rounded-full inline-block", st.active ? "bg-green-500" : "bg-red-400")} />
                             </span>
                           </button>
@@ -651,7 +657,7 @@ export default function BookingPage() {
 
               {step === 4 && (
                 <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                  <h3 className="text-lg font-bold mb-5">Confirm Details</h3>
+                  <h3 className="text-lg font-bold mb-5">{t("booking.confirmDetails", lang)}</h3>
                   <div className="bg-white rounded-2xl p-6 shadow-sm border border-pink-100 space-y-5">
                     {/* Phone Verification - Beautiful Block */}
                       {/* DEPLOY_MARKER_1782910591294 - NEW OTP IN BOOKING - IF YOU SEE THIS THE NEW CODE IS LIVE */}
@@ -842,7 +848,7 @@ export default function BookingPage() {
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     )}
                   >
-                    {loading ? "Processing..." : "Submit Booking Request"}
+                    {loading ? t("booking.processing", lang) : t("booking.submit", lang)}
                   </button>
                 </motion.div>
               )}
@@ -853,7 +859,7 @@ export default function BookingPage() {
               <div className="flex gap-4 mt-8">
                 {step > 1 && (
                   <button onClick={handleBack} className="btn-secondary flex-1">
-                    <ChevronLeft size={18} className="mr-2" /> Back
+                    <ChevronLeft size={18} className="mr-2" /> {t("booking.back", lang)}
                   </button>
                 )}
                 <button
@@ -864,14 +870,14 @@ export default function BookingPage() {
                     !canProceed && "opacity-50 cursor-not-allowed"
                   )}
                 >
-                  Next <ChevronRight size={18} className="ml-2" />
+                  {t("booking.next", lang)} <ChevronRight size={18} className="ml-2" />
                 </button>
               </div>
             )}
 
             <div className="text-center mt-6">
               <Link href="/" className="text-sm text-gray-400 hover:text-pink-500 transition-colors">
-                ← Back to Home
+                {t("booking.backToHome", lang)}
               </Link>
             </div>
           </motion.div>

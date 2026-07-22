@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { ArrowRight, CalendarDays, Sparkles } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { useLanguage } from "@/context/LanguageContext";
+import { t } from "@/lib/translations";
 
 const marqueeImages = [
   "/images/gallery-1.jpg",
@@ -19,6 +21,7 @@ const marqueeImages = [
 ];
 
 export default function Hero() {
+  const { lang } = useLanguage();
   const allImages = [...marqueeImages, ...marqueeImages, ...marqueeImages, ...marqueeImages];
 
   return (
@@ -45,30 +48,30 @@ export default function Hero() {
               className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full text-pink-600 text-sm font-semibold mb-6 shadow-sm border border-pink-100"
             >
               <Sparkles size={16} />
-              Premium Nail & Beauty Care
+              {t("hero.badge", lang)}
             </motion.div>
 
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6">
-              <span className="text-gradient">Beautiful</span>
+              <span className="text-gradient">{t("hero.title.beautiful", lang)}</span>
               <br />
-              Nails,{" "}
-              <span className="text-gray-900">Beautiful</span>
+              {t("hero.title.nails", lang)}{" "}
+              <span className="text-gray-900">{t("hero.title.beautiful", lang)}</span>
               <br />
-              <span className="text-gradient">You</span>
+              <span className="text-gradient">{t("hero.title.you", lang)}</span>
             </h1>
 
             <p className="text-xl text-gray-600 mb-8 max-w-lg leading-relaxed">
-              Here for Pretty Nails, Quality and Trust. Experience the best nail services in Stokesley with our skilled technicians.
+              {t("hero.subtitle", lang)}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/booking" className="btn-primary text-lg group">
                 <CalendarDays size={20} className="mr-2" />
-                Book Now
+                {t("hero.bookNow", lang)}
                 <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link href="/#services" className="btn-secondary text-lg">
-                Explore Services
+                {t("hero.exploreServices", lang)}
               </Link>
             </div>
 
@@ -89,8 +92,8 @@ export default function Hero() {
                 ))}
               </div>
               <div>
-                <p className="font-bold text-gray-900">500+ Happy Clients</p>
-                <p className="text-sm text-gray-500">Rated 5.0 on Google</p>
+                <p className="font-bold text-gray-900">{t("hero.happyClients", lang)}</p>
+                <p className="text-sm text-gray-500">{t("hero.ratedGoogle", lang)}</p>
               </div>
             </motion.div>
           </motion.div>
@@ -119,8 +122,8 @@ export default function Hero() {
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute -bottom-4 -left-4 bg-white rounded-2xl p-4 shadow-xl border border-pink-100"
               >
-                <p className="text-sm font-bold text-gray-900">10% OFF</p>
-                <p className="text-xs text-gray-500">for under 13&apos;s!</p>
+                <p className="text-sm font-bold text-gray-900">{t("hero.discount", lang)}</p>
+                <p className="text-xs text-gray-500">{t("hero.discountDesc", lang)}</p>
               </motion.div>
             </div>
           </motion.div>
