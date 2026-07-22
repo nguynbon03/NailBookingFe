@@ -337,6 +337,24 @@ const translations = {
 
   // ── BrandLogo ──
   "brand.stokesley": { en: "Stokesley", vi: "Stokesley" },
+
+  // ── My Bookings ──
+  "myBookings.customerArea": { en: "Customer Area", vi: "Khu vực khách hàng" },
+  "myBookings.title": { en: "My Bookings", vi: "Lịch của tôi" },
+  "myBookings.subtitle": { en: "Track your appointments and show this page to the shop when you arrive.", vi: "Theo dõi lịch hẹn và hiển thị trang này cho cửa hàng khi bạn đến." },
+  "myBookings.bookAgain": { en: "Book Again", vi: "Đặt lịch lại" },
+  "myBookings.loading": { en: "Loading your bookings...", vi: "Đang tải lịch hẹn..." },
+  "myBookings.noBookings": { en: "No bookings yet", vi: "Chưa có lịch hẹn" },
+  "myBookings.noBookingsDesc": { en: "Create your first appointment online.", vi: "Tạo lịch hẹn đầu tiên trực tuyến." },
+  "myBookings.bookNow": { en: "Book Now", vi: "Đặt lịch ngay" },
+  "myBookings.staff": { en: "Staff", vi: "Nhân viên" },
+  "myBookings.confirmed": { en: "Confirmed", vi: "Đã xác nhận" },
+  "myBookings.pending": { en: "Waiting for staff", vi: "Chờ nhân viên" },
+  "myBookings.cancelled": { en: "Cancelled", vi: "Đã hủy" },
+  "myBookings.completed": { en: "Completed", vi: "Hoàn thành" },
+  "myBookings.invoice": { en: "Invoice", vi: "Hóa đơn" },
+  "myBookings.people": { en: "People", vi: "Số người" },
+  "myBookings.total": { en: "Total", vi: "Tổng cộng" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

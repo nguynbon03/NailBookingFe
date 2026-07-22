@@ -6,7 +6,9 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { AlertCircle, CalendarDays, Clock, MessageCircle, Phone, Scissors, Star, Send, XCircle } from "lucide-react";
+import { AlertCircle, CalendarDays, Clock, MessageCircle, Phone, Scissors, XCircle, CalendarPlus } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
+import { t } from "@/lib/translations";
 
 function money(value: number) {
   return `£${Number(value || 0).toFixed(2)}`;
@@ -44,13 +46,13 @@ type Booking = {
   depositRequired?: boolean;
   depositAmount?: number | null;
   services?: { service: { name: string; image?: string | null; price: number; duration: number } }[];
-  review?: { id: string; rating: number; comment?: string | null; publicComment?: boolean; createdAt?: string } | null;
 };
 
 type CustomerNotification = { id: string; title: string; message: string; read: boolean; createdAt: string; type: string };
 
 export default function MyBookingsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { lang } = useLanguage();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [websiteNotifications, setWebsiteNotifications] = useState<CustomerNotification[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -60,8 +62,6 @@ export default function MyBookingsPage() {
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [submittingCancel, setSubmittingCancel] = useState(false);
-  const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; comment: string }>>({});
-  const [reviewBusyId, setReviewBusyId] = useState("");
 
   const refresh = () => {
     setLoading(true);
@@ -116,35 +116,15 @@ export default function MyBookingsPage() {
     }
   };
 
-  const submitReview = async (booking: Booking) => {
-    const draft = reviewDrafts[booking.id] || { rating: booking.review?.rating || 5, comment: booking.review?.comment || "" };
-    const rating = Math.max(1, Math.min(5, Number(draft.rating || 5)));
-    setReviewBusyId(booking.id);
-    setError("");
-    setMessage("");
-    try {
-      const result = await api.bookings.review({ bookingId: booking.id, rating, comment: draft.comment, publicComment: true });
-      setBookings((items) => items.map((item) => item.id === booking.id ? { ...item, review: result.review } : item));
-      setMessage(`Thank you. Your ${rating}/5 staff feedback has been saved.`);
-    } catch (err: any) {
-      setError(err.message || "Could not save feedback");
-    } finally {
-      setReviewBusyId("");
-    }
-  };
-
   return (
     <>
       <Navbar />
-      <main className="pt-24 min-h-screen bg-gradient-to-b from-pink-50/40 to-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
-          <div className="flex items-center justify-between gap-4 mb-8">
-            <div>
-              <p className="text-pink-500 font-semibold mb-2">Customer Area</p>
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">My Bookings</h1>
-              <p className="text-gray-500 mt-2">Track your appointments and show this page to the shop when you arrive.</p>
-            </div>
-            <Link href="/booking" className="btn-primary shrink-0">Book Again</Link>
+      <main className="pt-20 min-h-screen bg-gradient-to-b from-pink-50/40 to-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+          <div className="mb-8 sm:mb-10">
+            <p className="text-pink-500 font-semibold text-sm mb-1">{t("myBookings.customerArea", lang)}</p>
+            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">{t("myBookings.title", lang)}</h1>
+            <p className="text-gray-500 mt-2 text-sm sm:text-base">{t("myBookings.subtitle", lang)}</p>
           </div>
 
           {message && <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">{message}</div>}
@@ -192,22 +172,22 @@ export default function MyBookingsPage() {
                 const perPersonTotal = (booking.services || []).reduce((sum, item) => sum + Number(item.service?.price || 0), 0);
                 const subtotal = Math.round(perPersonTotal * people * 100) / 100;
                 return (
-                  <div key={booking.id} className="bg-white rounded-3xl border border-pink-100 p-5 sm:p-6 shadow-sm">
-                    <div className="flex flex-col sm:flex-row gap-5">
-                      <div className="w-full sm:w-28 h-28 rounded-2xl overflow-hidden bg-gradient-to-br from-pink-100 to-rose-100 shrink-0 flex items-center justify-center text-pink-400">
+                  <div key={booking.id} className="bg-white rounded-3xl border border-pink-100 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+                      <div className="w-full sm:w-24 h-24 rounded-2xl overflow-hidden bg-gradient-to-br from-pink-100 to-rose-100 shrink-0 flex items-center justify-center text-pink-400">
                         {firstService?.image ? (
                           <img src={firstService.image} alt={firstService.name} className="w-full h-full object-cover" />
                         ) : (
-                          <Scissors size={32} />
+                          <Scissors size={28} />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                          <div>
-                            <h2 className="font-bold text-lg text-gray-900">{booking.services?.map((s) => s.service.name).join(", ") || "Appointment"}</h2>
-                            <p className="text-sm text-gray-500">Staff: {staffDisplay(booking)}</p>
+                        <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                          <div className="min-w-0 flex-1">
+                            <h2 className="font-bold text-base sm:text-lg text-gray-900 truncate">{booking.services?.map((s) => s.service.name).join(", ") || "Appointment"}</h2>
+                            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Staff: {staffDisplay(booking)}</p>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${meta.tone}`}>{meta.label}</span>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase whitespace-nowrap ${meta.tone}`}>{meta.label}</span>
                         </div>
                         <div className="grid sm:grid-cols-3 gap-3 text-sm">
                           <div className="flex items-center gap-2 text-gray-600"><CalendarDays size={16} className="text-pink-500" />{new Date(booking.date).toLocaleDateString()}</div>
@@ -233,47 +213,6 @@ export default function MyBookingsPage() {
                             <p className="flex justify-between pt-2 mt-2 border-t border-pink-100 text-base font-black text-gray-900"><span>Total</span><span>{money(booking.totalPrice)}</span></p>
                           </div>
                         </div>
-                        {booking.status === "COMPLETED" && booking.staff?.name && (() => {
-                          const draft = reviewDrafts[booking.id] || { rating: booking.review?.rating || 5, comment: booking.review?.comment || "" };
-                          return (
-                            <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50/70 p-4" data-staff-feedback="staff-feedback-v20260709">
-                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                <div>
-                                  <p className="text-sm font-black text-gray-900">Rate your staff experience</p>
-                                  <p className="text-xs text-gray-600">How did {booking.staff.name} do? This helps the shop know who customers love most.</p>
-                                </div>
-                                {booking.review && <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-amber-700">Saved {booking.review.rating}/5</span>}
-                              </div>
-                              <div className="mt-3 flex flex-wrap items-center gap-2">
-                                {[1, 2, 3, 4, 5].map((rating) => (
-                                  <button
-                                    key={rating}
-                                    type="button"
-                                    onClick={() => setReviewDrafts((current) => ({ ...current, [booking.id]: { ...draft, rating } }))}
-                                    className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-black transition ${rating <= draft.rating ? "border-amber-300 bg-amber-400 text-white" : "border-amber-100 bg-white text-amber-300"}`}
-                                    aria-label={`Rate ${rating} out of 5`}
-                                  >
-                                    <Star size={18} fill="currentColor" />
-                                  </button>
-                                ))}
-                                <span className="text-sm font-black text-amber-700">{draft.rating}/5</span>
-                              </div>
-                              <textarea
-                                value={draft.comment}
-                                onChange={(e) => setReviewDrafts((current) => ({ ...current, [booking.id]: { ...draft, comment: e.target.value } }))}
-                                className="mt-3 min-h-20 w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-amber-200"
-                                placeholder="Optional: tell us what went well"
-                              />
-                              <button
-                                onClick={() => submitReview(booking)}
-                                disabled={reviewBusyId === booking.id}
-                                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-amber-500 px-4 text-sm font-black text-white hover:bg-amber-600 disabled:opacity-50"
-                              >
-                                <Send size={15} /> {reviewBusyId === booking.id ? "Saving feedback..." : booking.review ? "Update feedback" : "Send feedback"}
-                              </button>
-                            </div>
-                          );
-                        })()}
                         <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-pink-50">
                           {!["CANCELLED", "COMPLETED", "NO_SHOW"].includes(booking.status) && !booking.cancellationReason?.startsWith("Customer requested") && (
                             <button onClick={() => { setCancelTarget(booking); setCancelReason(""); }} className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-black text-gray-500 hover:border-red-100 hover:bg-red-50 hover:text-red-600">
