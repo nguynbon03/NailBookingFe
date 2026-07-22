@@ -2,8 +2,12 @@
 
 import { Sparkles, Mail, Phone, MapPin, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { useLanguage } from "@/context/LanguageContext";
+import { t } from "@/lib/translations";
 
 export default function Footer() {
+  const { lang } = useLanguage();
+
   return (
     <footer className="bg-gray-900 text-white pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -19,7 +23,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed mb-6">
-              Your go-to destination for stunning nails and professional beauty care in Stokesley.
+              {t("footer.tagline", lang)}
             </p>
             <div className="flex gap-3">
               <a href="#" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-pink-600 transition-colors">
@@ -33,31 +37,31 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-semibold mb-4 text-white">Quick Links</h4>
+            <h4 className="font-semibold mb-4 text-white">{t("footer.quickLinks", lang)}</h4>
             <nav className="flex flex-col gap-2.5 text-sm text-gray-400">
-              <Link href="/" className="hover:text-pink-400 transition-colors">Home</Link>
-              <Link href="/services-page" className="hover:text-pink-400 transition-colors">Services</Link>
-              <Link href="/booking" className="hover:text-pink-400 transition-colors">Book Now</Link>
-              <Link href="/gallery" className="hover:text-pink-400 transition-colors">Gallery</Link>
-              <Link href="/#contact" className="hover:text-pink-400 transition-colors">Contact</Link>
+              <Link href="/" className="hover:text-pink-400 transition-colors">{t("footer.home", lang)}</Link>
+              <Link href="/services-page" className="hover:text-pink-400 transition-colors">{t("footer.services", lang)}</Link>
+              <Link href="/booking" className="hover:text-pink-400 transition-colors">{t("footer.bookNow", lang)}</Link>
+              <Link href="/gallery" className="hover:text-pink-400 transition-colors">{t("footer.gallery", lang)}</Link>
+              <Link href="/#contact" className="hover:text-pink-400 transition-colors">{t("footer.contact", lang)}</Link>
             </nav>
           </div>
 
           {/* Services */}
           <div>
-            <h4 className="font-semibold mb-4 text-white">Services</h4>
+            <h4 className="font-semibold mb-4 text-white">{t("footer.servicesTitle", lang)}</h4>
             <nav className="flex flex-col gap-2.5 text-sm text-gray-400">
-              <Link href="/services-page" className="hover:text-pink-400 transition-colors">Nail Extensions</Link>
-              <Link href="/services-page" className="hover:text-pink-400 transition-colors">Gel Polish</Link>
-              <Link href="/services-page" className="hover:text-pink-400 transition-colors">Manicure & Pedicure</Link>
-              <Link href="/services-page" className="hover:text-pink-400 transition-colors">Nail Art</Link>
-              <Link href="/services-page" className="hover:text-pink-400 transition-colors">Waxing</Link>
+              <Link href="/services-page" className="hover:text-pink-400 transition-colors">{t("footer.nailExtensions", lang)}</Link>
+              <Link href="/services-page" className="hover:text-pink-400 transition-colors">{t("footer.gelPolish", lang)}</Link>
+              <Link href="/services-page" className="hover:text-pink-400 transition-colors">{t("footer.maniPedi", lang)}</Link>
+              <Link href="/services-page" className="hover:text-pink-400 transition-colors">{t("footer.nailArt", lang)}</Link>
+              <Link href="/services-page" className="hover:text-pink-400 transition-colors">{t("footer.waxing", lang)}</Link>
             </nav>
           </div>
 
           {/* Contact */}
           <div>
-            <h4 className="font-semibold mb-4 text-white">Contact</h4>
+            <h4 className="font-semibold mb-4 text-white">{t("footer.contactTitle", lang)}</h4>
             <div className="space-y-3 text-sm text-gray-400">
               <p className="flex items-start gap-2">
                 <MapPin size={16} className="text-pink-400 shrink-0 mt-0.5" />
@@ -77,12 +81,12 @@ export default function Footer() {
 
         <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-gray-500">
-            Copyright © 2026 The Nail Lounge @ Stokesley. All Rights Reserved
+            {t("footer.copyright", lang)}
           </p>
           <div className="flex gap-6 text-sm text-gray-500">
-            <Link href="#" className="hover:text-pink-400 transition-colors">Terms</Link>
-            <Link href="#" className="hover:text-pink-400 transition-colors">Privacy</Link>
-            <Link href="#" className="hover:text-pink-400 transition-colors">Consent</Link>
+            <Link href="#" className="hover:text-pink-400 transition-colors">{t("footer.terms", lang)}</Link>
+            <Link href="#" className="hover:text-pink-400 transition-colors">{t("footer.privacy", lang)}</Link>
+            <Link href="#" className="hover:text-pink-400 transition-colors">{t("footer.consent", lang)}</Link>
           </div>
         </div>
       </div>

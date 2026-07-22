@@ -3,31 +3,24 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Hand,
-  Footprints,
-  Sparkles,
-  Scissors,
-  Star,
-  Droplets,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  ArrowRight,
-  ImageIcon,
+  Hand, Footprints, Sparkles, Scissors, Star, Droplets,
+  ChevronDown, ChevronUp, Clock, ArrowRight, ImageIcon,
 } from "lucide-react";
 import Link from "next/link";
 import salonData from "@/data/salon-data.json";
+import { useLanguage } from "@/context/LanguageContext";
+import { t } from "@/lib/translations";
 
 const categoryConfig: Record<
   string,
-  { label: string; icon: React.ElementType; color: string }
+  { icon: React.ElementType; color: string }
 > = {
-  extensions_hands: { label: "Nail Extensions (Hands)", icon: Hand, color: "bg-pink-50 text-pink-600" },
-  extensions_feet: { label: "Nail Extensions (Feet)", icon: Footprints, color: "bg-rose-50 text-rose-600" },
-  gel_polish: { label: "Gel Polish", icon: Sparkles, color: "bg-fuchsia-50 text-fuchsia-600" },
-  mani_pedi: { label: "Mani & Pedi", icon: Scissors, color: "bg-pink-50 text-pink-600" },
-  extras: { label: "Extras", icon: Star, color: "bg-amber-50 text-amber-600" },
-  waxing: { label: "Waxing", icon: Droplets, color: "bg-cyan-50 text-cyan-600" },
+  extensions_hands: { icon: Hand, color: "bg-pink-50 text-pink-600" },
+  extensions_feet: { icon: Footprints, color: "bg-rose-50 text-rose-600" },
+  gel_polish: { icon: Sparkles, color: "bg-fuchsia-50 text-fuchsia-600" },
+  mani_pedi: { icon: Scissors, color: "bg-pink-50 text-pink-600" },
+  extras: { icon: Star, color: "bg-amber-50 text-amber-600" },
+  waxing: { icon: Droplets, color: "bg-cyan-50 text-cyan-600" },
 };
 
 const categoryOrder = [
@@ -40,6 +33,7 @@ const categoryOrder = [
 ];
 
 export default function PriceList() {
+  const { lang } = useLanguage();
   const [openCategory, setOpenCategory] = useState<string | null>("extensions_hands");
 
   const handleBook = (serviceName: string) => {
@@ -56,8 +50,8 @@ export default function PriceList() {
         viewport={{ once: true }}
         className="text-center mb-12"
       >
-        <p className="text-pink-500 font-semibold mb-3">Transparent Pricing</p>
-        <h2 className="text-4xl lg:text-5xl font-bold text-gradient">Price List</h2>
+        <p className="text-pink-500 font-semibold mb-3">{t("priceList.badge", lang)}</p>
+        <h2 className="text-4xl lg:text-5xl font-bold text-gradient">{t("priceList.title", lang)}</h2>
       </motion.div>
 
       <div className="max-w-4xl mx-auto space-y-3">
@@ -70,6 +64,7 @@ export default function PriceList() {
             duration: string;
           }>;
           const isOpen = openCategory === catKey;
+          const catLabelKey = `priceList.cat.${catKey}` as any;
 
           return (
             <motion.div
@@ -89,8 +84,8 @@ export default function PriceList() {
                     <Icon size={22} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg text-gray-900">{config.label}</h3>
-                    <p className="text-sm text-gray-400">{services.length} services</p>
+                    <h3 className="font-bold text-lg text-gray-900">{t(catLabelKey, lang)}</h3>
+                    <p className="text-sm text-gray-400">{services.length} {t("priceList.services", lang)}</p>
                   </div>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center text-pink-500 transition-transform duration-300">
@@ -135,7 +130,7 @@ export default function PriceList() {
                               onClick={() => handleBook(service.name)}
                               className="btn-primary text-xs sm:text-sm py-2 px-4 flex items-center gap-1 group/btn"
                             >
-                              Book
+                              {t("priceList.book", lang)}
                               <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
                             </Link>
                           </div>

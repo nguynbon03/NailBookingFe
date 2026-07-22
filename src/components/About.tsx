@@ -3,14 +3,18 @@
 import { motion } from "framer-motion";
 import { Award, Heart, Sparkles } from "lucide-react";
 import Image from "next/image";
-
-const features = [
-  { icon: Sparkles, label: "Premium Quality" },
-  { icon: Heart, label: "Gentle Care" },
-  { icon: Award, label: "Expert Staff" },
-];
+import { useLanguage } from "@/context/LanguageContext";
+import { t } from "@/lib/translations";
 
 export default function About() {
+  const { lang } = useLanguage();
+
+  const features = [
+    { icon: Sparkles, label: t("about.premiumQuality", lang) },
+    { icon: Heart, label: t("about.gentleCare", lang) },
+    { icon: Award, label: t("about.expertStaff", lang) },
+  ];
+
   return (
     <section id="about" className="section-padding px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -31,7 +35,7 @@ export default function About() {
           </div>
           <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl p-5 shadow-xl border border-pink-50">
             <p className="text-3xl font-bold text-gradient">8+</p>
-            <p className="text-sm text-gray-500">Years Experience</p>
+            <p className="text-sm text-gray-500">{t("about.experience", lang)}</p>
           </div>
         </motion.div>
 
@@ -43,18 +47,15 @@ export default function About() {
         >
           <p className="text-pink-500 font-semibold mb-3 flex items-center gap-2">
             <Sparkles size={18} />
-            About Us
+            {t("about.badge", lang)}
           </p>
           <h2 className="text-4xl lg:text-5xl font-bold mb-6">
-            We Are{" "}
-            <span className="text-gradient">The Nail Lounge</span>
+            {t("about.title", lang)}{" "}
+            <span className="text-gradient">{t("about.titleBrand", lang)}</span>
           </h2>
-          <p className="text-gray-600 text-lg leading-relaxed mb-6">
-            Welcome to{" "}
-            <strong className="text-gray-900">The Nail Lounge @ Stokesley</strong>, your go-to destination for stunning nails and professional beauty care. Our skilled technicians specialize in manicures, pedicures, acrylics, gel nails, and intricate nail art.
-          </p>
+          <p className="text-gray-600 text-lg leading-relaxed mb-6" dangerouslySetInnerHTML={{ __html: t("about.description1", lang) }} />
           <p className="text-gray-600 text-lg leading-relaxed mb-8">
-            We provide a welcoming and relaxing atmosphere where every client receives top-quality service and attention to detail. Whether you&apos;re after a simple, elegant look or a bold, trendy design, we bring your vision to life.
+            {t("about.description2", lang)}
           </p>
 
           <div className="flex flex-wrap gap-4 mb-8">
@@ -71,7 +72,7 @@ export default function About() {
 
           <div className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full font-semibold shadow-lg shadow-pink-200">
             <Sparkles size={18} />
-            10% off for under 13&apos;s!
+            {t("about.discount", lang)}
           </div>
         </motion.div>
       </div>

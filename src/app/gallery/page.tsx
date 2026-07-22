@@ -7,8 +7,10 @@ import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useLanguage } from "@/context/LanguageContext";
+import { t } from "@/lib/translations";
 
-const categories = ["All", "Acrylic", "Gel", "Nail Art", "Chrome", "Ombre"];
+const categoryKeys = ["All", "Acrylic", "Gel", "Nail Art", "Chrome", "Ombre"];
 
 const images = [
   { src: "/images/gallery-1.jpg", title: "BIAB Extension", cat: "Gel" },
@@ -24,6 +26,7 @@ const images = [
 ];
 
 export default function GalleryPage() {
+  const { lang } = useLanguage();
   const [activeCat, setActiveCat] = useState("All");
   const [lightbox, setLightbox] = useState<string | null>(null);
 
@@ -35,12 +38,12 @@ export default function GalleryPage() {
       <main className="pt-16 min-h-screen bg-gradient-to-b from-pink-50/30 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
-            <h1 className="text-4xl font-bold text-gradient mb-3">Our Gallery</h1>
-            <p className="text-gray-500">Explore our stunning nail designs and transformations</p>
+            <h1 className="text-4xl font-bold text-gradient mb-3">{t("gallery.title", lang)}</h1>
+            <p className="text-gray-500">{t("gallery.subtitle", lang)}</p>
           </motion.div>
 
           <div className="flex flex-wrap gap-2 justify-center mb-10">
-            {categories.map((c) => (
+            {categoryKeys.map((c) => (
               <button
                 key={c}
                 onClick={() => setActiveCat(c)}
@@ -50,7 +53,7 @@ export default function GalleryPage() {
                     : "bg-white text-gray-600 border border-pink-100 hover:bg-pink-50"
                 }`}
               >
-                {c}
+                {t(`gallery.cat.${c}` as any, lang)}
               </button>
             ))}
           </div>
@@ -82,7 +85,7 @@ export default function GalleryPage() {
           </motion.div>
 
           <div className="text-center mt-10">
-            <Link href="/" className="text-sm text-gray-400 hover:text-pink-500 transition-colors">← Back to Home</Link>
+            <Link href="/" className="text-sm text-gray-400 hover:text-pink-500 transition-colors">{t("gallery.backToHome", lang)}</Link>
           </div>
         </div>
       </main>

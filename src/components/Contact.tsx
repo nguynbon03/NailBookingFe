@@ -3,8 +3,11 @@
 import { motion } from "framer-motion";
 import { MapPin, Phone, Mail, Clock, CalendarDays } from "lucide-react";
 import salonData from "@/data/salon-data.json";
+import { useLanguage } from "@/context/LanguageContext";
+import { t } from "@/lib/translations";
 
 export default function Contact() {
+  const { lang } = useLanguage();
   const { salon } = salonData;
 
   return (
@@ -16,9 +19,9 @@ export default function Contact() {
           viewport={{ once: true }}
           className="text-center mb-14"
         >
-          <p className="text-pink-500 font-semibold mb-3">Get In Touch</p>
+          <p className="text-pink-500 font-semibold mb-3">{t("contact.badge", lang)}</p>
           <h2 className="text-4xl lg:text-5xl font-bold text-gradient">
-            Visit Our Salon
+            {t("contact.title", lang)}
           </h2>
         </motion.div>
 
@@ -36,7 +39,7 @@ export default function Contact() {
                 <MapPin size={22} />
               </div>
               <div>
-                <h4 className="font-bold text-gray-900 mb-1">Address</h4>
+                <h4 className="font-bold text-gray-900 mb-1">{t("contact.address", lang)}</h4>
                 <p className="text-gray-600">{salon.address}</p>
                 <p className="text-gray-600">{salon.postcode}</p>
               </div>
@@ -47,7 +50,7 @@ export default function Contact() {
                 <Phone size={22} />
               </div>
               <div>
-                <h4 className="font-bold text-gray-900 mb-1">Phone</h4>
+                <h4 className="font-bold text-gray-900 mb-1">{t("contact.phone", lang)}</h4>
                 <a href={`tel:${salon.phone}`} className="text-gray-600 hover:text-pink-600 transition-colors">
                   {salon.phone}
                 </a>
@@ -59,7 +62,7 @@ export default function Contact() {
                 <Mail size={22} />
               </div>
               <div>
-                <h4 className="font-bold text-gray-900 mb-1">Email</h4>
+                <h4 className="font-bold text-gray-900 mb-1">{t("contact.email", lang)}</h4>
                 <a href={`mailto:${salon.email}`} className="text-gray-600 hover:text-pink-600 transition-colors">
                   {salon.email}
                 </a>
@@ -71,7 +74,7 @@ export default function Contact() {
                 <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center text-pink-500">
                   <Clock size={20} />
                 </div>
-                <h4 className="font-bold text-gray-900">Opening Hours</h4>
+                <h4 className="font-bold text-gray-900">{t("contact.openingHours", lang)}</h4>
               </div>
               <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                 {salon.hours.map((h) => (
@@ -109,7 +112,7 @@ export default function Contact() {
                 className="text-sm text-pink-600 hover:text-pink-700 font-medium inline-flex items-center gap-1"
               >
                 <MapPin size={14} />
-                Open in Google Maps
+                {t("contact.openInMaps", lang)}
               </a>
             </div>
           </motion.div>
