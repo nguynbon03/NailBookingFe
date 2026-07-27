@@ -82,6 +82,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative"><Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="text" value={email} onChange={e => setEmail(e.target.value)} placeholder={t("login.usernamePlaceholder", lang)} required className="w-full pl-10 p-3.5 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" /></div>
             <div className="relative"><Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t("login.passwordPlaceholder", lang)} required className="w-full pl-10 p-3.5 rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 outline-none" /></div>
+            <div className="text-right"><Link href="/forgot-password" className="text-sm text-pink-600 font-semibold hover:underline">{t("login.forgotPassword", lang)}</Link></div>
             <button type="submit" disabled={loading} className="btn-primary w-full py-3.5"><LogIn size={18} className="mr-2 inline" />{loading ? t("login.signingIn", lang) : t("login.signIn", lang)}</button>
           </form>
           <p className="text-center text-sm text-gray-500 mt-4">{t("login.noAccount", lang)} <Link href="/register" className="text-pink-600 font-semibold hover:underline">{t("login.register", lang)}</Link></p>
