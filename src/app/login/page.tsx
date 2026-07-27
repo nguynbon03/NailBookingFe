@@ -21,10 +21,12 @@ function redirectForRole(role: string) {
 }
 
 function googleStartUrl() {
-  if (typeof window === "undefined") return "/api/auth/google";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
+  const path = "/api/auth/google";
+  if (typeof window === "undefined") return `${apiBase}${path}`;
   const params = new URLSearchParams(window.location.search);
   const next = params.get("next") || "/";
-  return `/api/auth/google?next=${encodeURIComponent(next)}`;
+  return `${apiBase}${path}?next=${encodeURIComponent(next)}`;
 }
 
 export default function LoginPage() {
