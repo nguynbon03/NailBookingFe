@@ -18,7 +18,7 @@ function normalizePhoneForDisplay(value: string) {
 }
 
 export default function VerifyPhonePage() {
-  const [phone, setPhone] = useState("0339351204");
+  const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [channel, setChannel] = useState<Channel>("auto");
   const [sending, setSending] = useState(false);
